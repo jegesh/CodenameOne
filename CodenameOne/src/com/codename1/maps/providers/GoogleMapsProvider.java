@@ -82,7 +82,7 @@ public class GoogleMapsProvider extends TiledProvider{
      * https://developers.google.com/maps/documentation/staticmaps/#api_key
      */
      public GoogleMapsProvider(String apiKey) {
-        super("http://maps.googleapis.com/maps/api/staticmap?", new Mercator(), new Dimension(tileSize, tileSize));
+        super("https://maps.googleapis.com/maps/api/staticmap?", new Mercator(), new Dimension(tileSize, tileSize));
         this.apiKey = apiKey;
     }
     
@@ -96,21 +96,21 @@ public class GoogleMapsProvider extends TiledProvider{
      
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public int maxZoomLevel() {
         return 18;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String attribution() {
         return "Google";
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Tile tileFor(BoundingBox bbox) {
         StringBuilder sb = new StringBuilder(_url);

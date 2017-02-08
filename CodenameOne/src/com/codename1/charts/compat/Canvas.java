@@ -30,13 +30,14 @@ import com.codename1.ui.Font;
 import com.codename1.ui.Image;
 import com.codename1.ui.Stroke;
 import com.codename1.ui.Transform;
-import com.codename1.ui.geom.GeneralPath;
 import com.codename1.ui.geom.Rectangle;
 import com.codename1.ui.geom.Rectangle2D;
 import com.codename1.ui.geom.Shape;
 
 import com.codename1.charts.compat.GradientDrawable.Orientation;
 import com.codename1.charts.util.ColorUtil;
+import com.codename1.ui.geom.GeneralPath;
+import java.util.ArrayList;
 
 /**
  * An internal compatibility class for use by the Charts library.  Since the 
@@ -113,7 +114,7 @@ public class Canvas  {
             //Log.p("Filling it");
             g.fillRect((int)left, (int)top, (int)right-(int)left, (int)bottom-(int)top);
         } else if ( Paint.Style.STROKE.equals(style)){
-            g.drawRect((int)left, (int)top, (int)right, (int)bottom-(int)top);
+            g.drawRect((int)left, (int)top, (int)right-(int)left, (int)bottom-(int)top);
         } else if ( Paint.Style.FILL_AND_STROKE.equals(style)){
             g.fillRect((int)left, (int)top, (int)right-(int)left, (int)bottom-(int)top);
             //g.drawRect((int)left+bounds.getX(), (int)top+bounds.getY(), (int)right-(int)left, (int)bottom-(int)top);
@@ -214,82 +215,26 @@ public class Canvas  {
 
     
     public void drawArc(Rectangle2D oval, float currentAngle, float sweepAngle, boolean useCenter, Paint paint) {
-        float cx = 0;
-        float cy = 0;
-        cx = (float)(oval.getX()+oval.getWidth()/2f);
-        cy = (float)(oval.getY()+oval.getHeight()/2f);
-        float r = (float)oval.getWidth()/2f;
-        float inc = 45f;
-        float prevX=0; float prevY=0;
-        GeneralPath circle = new GeneralPath();
-        if ( useCenter ){
-            circle.moveTo(cx, cy);
-        }
-        float theta = currentAngle;
-        float endAngle = currentAngle+sweepAngle;
-        for(; theta <= endAngle; theta+=inc)
-        {
-            float x = (float)(cx + r * Math.cos(Math.toRadians(theta)));
-            float y = (float)(cy + r * Math.sin(Math.toRadians(theta)));
+        applyPaint(paint);
+        Paint.Style style = paint.getStyle();
+        if ( Paint.Style.FILL.equals(style)){
+            g.fillArc((int)Math.round(oval.getX()), (int)Math.round(oval.getY()), (int)Math.round(oval.getWidth()), (int)Math.round(oval.getHeight()), -(int)Math.floor(currentAngle), -(int)Math.ceil(sweepAngle));
             
-            if(theta == currentAngle && !useCenter){
-                circle.moveTo(x,y);
-            } else if ( theta == currentAngle ){
-                circle.lineTo(x, y);
-            }else{
-                
-                //circle.lineTo(x,y);
-                addBezierArcToPath(circle, cx, cy, prevX, prevY, x, y);
-                
-            }
-            prevX = x;
-            prevY = y;
+        } else if ( Paint.Style.STROKE.equals(style)){
+            g.drawArc((int)Math.round(oval.getX()), (int)Math.round(oval.getY()), (int)Math.round(oval.getWidth()), (int)Math.round(oval.getHeight()), -(int)Math.floor(currentAngle), -(int)Math.ceil(sweepAngle));
+            
+        } else if ( Paint.Style.FILL_AND_STROKE.equals(style)){
+            g.fillArc((int)Math.round(oval.getX()), (int)Math.round(oval.getY()), (int)Math.round(oval.getWidth()), (int)Math.round(oval.getHeight()), -(int)Math.floor(currentAngle), -(int)Math.ceil(sweepAngle));
+            g.drawArc((int)Math.round(oval.getX()), (int)Math.round(oval.getY()), (int)Math.round(oval.getWidth()), (int)Math.round(oval.getHeight()), -(int)Math.floor(currentAngle), -(int)Math.ceil(sweepAngle));
+            
         }
         
-        
-        float x = (float)(cx + r * Math.cos(Math.toRadians(endAngle)));
-        float y = (float)(cy + r * Math.sin(Math.toRadians(endAngle)));
-        addBezierArcToPath(circle, cx, cy, prevX, prevY, x, y);
-        //circle.lineTo(x, y);
-       
-        if ( useCenter ){
-            circle.closePath();
-        }
-        /*
-        cx = (float)(oval.getX()+oval.getWidth()/2f);
-        cy = (float)(oval.getY()+oval.getHeight()/2f);
-        
-        //Matrix at = Matrix.getTranslateInstance(cx, cy);
-        Transform at = Transform.makeIdentity();//Transform.makeScale((float)1.0,(float)((oval.getHeight())/ (2.0*r)) );
-        //at.scale(1.0, (oval.bottom-oval.top)/ (2.0*r));
-        at.translate(cx, cy);
-        
-        Shape tCircle = circle.createTransformedShape(at);
-        */
-        drawPath(circle, paint);
     }
 
+    public void drawArcWithGradient(Rectangle2D oval, float currentAngle, float sweepAngle, boolean useCenter, Paint paint, GradientDrawable gradient) {
+        g.fillRadialGradient(gradient.colors[1], gradient.colors[0], (int)oval.getX(), (int)oval.getY(), (int)oval.getWidth(), (int)oval.getHeight(), -(int)Math.floor(currentAngle), -(int)Math.ceil(sweepAngle));
+    }
     
-    private static void addBezierArcToPath(GeneralPath path, float cx, float cy,
-                                          float startX, float startY, float endX, float endY)
-    {
-        if ( startX != endX || startY != endY ){
-            final double ax = startX - cx;
-            final double ay = startY - cy;
-            final double bx = endX - cx;
-            final double by = endY- cy;
-            final double q1 = ax * ax + ay * ay;
-            final double q2 = q1 + ax * bx + ay * by;
-            final double k2 = 4d / 3d * (Math.sqrt(2d * q1 * q2) - q2) / (ax * by - ay * bx);
-            final float x2 = (float)(cx + ax - k2 * ay);
-            final float y2 = (float)(cy + ay + k2 * ax);
-            final float x3 = (float)(cx + bx + k2 * by);
-            final float y3 = (float)(cy + by - k2 * bx);
-            //Log.p("Curve: "+startX+","+startY+" -> "+x2+","+y2+" -> "+x3+","+y3+" -> "+endX+","+endY);
-
-            path.curveTo(x2, y2, x3, y3, endX, endY);
-        }
-    }
     public void drawPoint(Float get, Float get0, Paint paint) {
         throw new RuntimeException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -318,21 +263,22 @@ public class Canvas  {
         Orientation o = gradient.orientation;
         Rectangle r = gradient.bounds;
         int[] colors = gradient.colors;
-        
+        int clen = colors.length;
+               
         if ( Orientation.TOP_BOTTOM.equals(o) || Orientation.BOTTOM_TOP.equals(o)){
 
            if ( Orientation.BOTTOM_TOP.equals(o) ){
-               colors = new int[colors.length];
+               colors = new int[clen];
                
-               for ( int i=0; i<colors.length; i++){
+               for ( int i=0; i<clen; i++){
                
-                   colors[i] = gradient.colors[colors.length-i-1];
+                   colors[i] = gradient.colors[clen-i-1];
                }
            }
-           g.fillLinearGradient(colors[0], colors[colors.length-1], r.getX(), r.getY(), r.getWidth(), r.getHeight(), false);
+           g.fillLinearGradient(colors[0], colors[clen-1], r.getX(), r.getY(), r.getWidth(), r.getHeight(), false);
            
         } else if ( Orientation.LEFT_RIGHT.equals(o)){
-           g.fillLinearGradient(gradient.colors[0], gradient.colors[gradient.colors.length-1], r.getX(), r.getY(), r.getWidth(), r.getHeight(), true);
+           g.fillLinearGradient(gradient.colors[0], gradient.colors[clen-1], r.getX(), r.getY(), r.getWidth(), r.getHeight(), true);
         } else {
            Log.p("Gradient with type "+o+" not implemented yet.  Just filling solid rect");
            g.setColor(gradient.colors[0]);
@@ -341,6 +287,10 @@ public class Canvas  {
         
         
         
+    }
+
+    public boolean isShapeClipSupported() {
+        return g.isShapeClipSupported();
     }
     
 }

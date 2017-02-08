@@ -52,11 +52,21 @@ public class FacebookShare extends ShareService {
      * Default Constructor
      */
     public FacebookShare() {
-        super("Facebook", Resources.getSystemResource().getImage("facebook.png"));
+        super("Facebook", null);
+    }
+
+    @Override
+    public Image getIcon() {
+        Image i = super.getIcon();
+        if(i == null) {
+            i = Resources.getSystemResource().getImage("facebook.png");
+            setIcon(i);
+        }
+        return i;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void actionPerformed(ActionEvent evt) {
         if (!FaceBookAccess.getInstance().isAuthenticated()) {
@@ -74,7 +84,7 @@ public class FacebookShare extends ShareService {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void share(String text, final String image, final String mime) {
         final ShareForm[] f = new ShareForm[1];
@@ -159,14 +169,14 @@ public class FacebookShare extends ShareService {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void share(String toShare) {
         share(toShare, null, null);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean canShareImage() {
         return true;

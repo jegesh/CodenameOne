@@ -65,9 +65,11 @@ public class ProxyHttpTile extends Tile {
             public void actionPerformed(ActionEvent evt) {
                 NetworkEvent ne = (NetworkEvent) evt;
 
+                Image i = (Image) ne.getMetaData();
+                i.lock();
                 _tile = new Tile(ProxyHttpTile.this.dimension(),
                         ProxyHttpTile.this.getBoundingBox(),
-                        (Image) ne.getMetaData());
+                        i);
                 ProxyHttpTile.this.fireReady();
             }
         }, cacheId, true);
@@ -76,7 +78,7 @@ public class ProxyHttpTile extends Tile {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean paint(Graphics g) {
         if(_tile == null){

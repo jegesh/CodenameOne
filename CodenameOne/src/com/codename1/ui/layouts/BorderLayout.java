@@ -31,13 +31,48 @@ import com.codename1.ui.plaf.Style;
 import java.util.HashMap;
 
 /**
- * A border layout lays out a container, arranging and resizing its 
+ * <p>A border layout lays out a container, arranging and resizing its 
  * components to fit in five regions: north, south, east, west, and center. 
  * Each region may contain no more than one component, and is identified by a 
  * corresponding constant: NORTH, SOUTH, EAST, WEST, and CENTER. 
  * When adding a component to a container with a border layout, use one of 
- * these five constants.
+ * these five constants.</p>
+ * <p>
+ * The border layout scales all of the components within it to match the available 
+ * constraints. The NORTH &amp; SOUTH components use their preferred height but
+ * are stretched to take up the full width available. The EAST &amp; WEST do the same
+ * for the reverse axis however they leave room for the NORTH/SOUTH entries if they
+ * are defined.<br>
+ * The CENTER constraint will take up the rest of the available space regardless of its preferred
+ * size. This is normally very useful, however in some cases we would prefer that the center
+ * component will actually position itself in the middle of the available space. For this we have
+ * the <code>setCenterBehavior</code> method.
+ * </p>
+ * <p>
+ * Because of its scaling behavior scrolling a border layout makes no sense. However it is a 
+ * common mistake to apply a border layout to a scrollable container or trying to make a border
+ * layout scrollable. That is why the {@link com.codename1.ui.Container} class explicitly blocks
+ * scrolling on a BorderLayout.<br>
+ * Typical usage of this class:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/23e642b1a749e2f37e68.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/border-layout.png" alt="Border Layout" />
  *
+ * <p>
+ * When defining the center behavior we can get very different results:
+ * </p>
+ *<script src="https://gist.github.com/codenameone/108aa105386ed7c340ad.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/border-layout-center.png" alt="Border Layout Center" />
+ * 
+ * <p>Notice that in the case of RTL (right to left language also known as bidi) the
+ * EAST and WEST values are implicitly reversed as shown in this image:
+ * </p>
+ * <img src="https://www.codenameone.com/img/developer-guide/border-layout-RTL.png" alt="Border Layout bidi/RTL" />
+ * 
+ * <p>
+ * You can read further in the <a href="https://www.codenameone.com/manual/basics.html#_border_layout">BorderLayout section in the developer guide</a>.
+ * </p>
+ * 
  * @author Nir Shabi, Shai Almog
  */
 public class BorderLayout extends Layout {
@@ -65,11 +100,11 @@ public class BorderLayout extends Layout {
      * Deprecated due to spelling mistake, use CENTER_BEHAVIOR_TOTAL_BELOW
      * The center component takes up the entire screens and the sides are automatically placed on top of it thus creating
      * a layered effect
+     * @deprecated Deprecated due to spelling mistake, use CENTER_BEHAVIOR_TOTAL_BELOW
      */
     public static final int CENTER_BEHAVIOR_TOTAL_BELLOW = 3;
 
     /**
-     * Deprecated due to spelling mistake, use CENTER_BEHAVIOR_TOTAL_BELOW
      * The center component takes up the entire screens and the sides are automatically placed on top of it thus creating
      * a layered effect
      */
@@ -115,8 +150,16 @@ public class BorderLayout extends Layout {
     public BorderLayout() {
     }
 
+    /** 
+     * Creates a new instance of BorderLayout  with absolute behavior
+     * @param  behavior identical value as the setCenterBehavior method
+     */
+    public BorderLayout(int behavior) {
+        setCenterBehavior(behavior);
+    }
+
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void addLayoutComponent(Object name, Component comp, Container c) {
         // helper check for a common mistake...
@@ -124,6 +167,29 @@ public class BorderLayout extends Layout {
             throw new IllegalArgumentException("Cannot add component to BorderLayout Container without constraint parameter");
         }
 
+        // allows us to work with Component constraints too which makes some code simpler
+        if(name instanceof Integer) {
+            switch(((Integer)name).intValue()) {
+                case Component.TOP:
+                    name = NORTH;
+                    break;
+                case Component.BOTTOM:
+                    name = SOUTH;
+                    break;
+                case Component.LEFT:
+                    name = WEST;
+                    break;
+                case Component.RIGHT:
+                    name = EAST;
+                    break;
+                case Component.CENTER:
+                    name = CENTER;
+                    break;
+                default:
+                    throw new IllegalArgumentException("BorderLayout Container expects one of the constraints BorderLayout.NORTH/SOUTH/EAST/WEST/CENTER");            
+            }
+        }
+        
         Component previous = null;
 
         /* Assign the component to one of the known regions of the layout.
@@ -152,7 +218,7 @@ public class BorderLayout extends Layout {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void removeLayoutComponent(Component comp) {
         if (comp == portraitCenter) {
@@ -192,14 +258,14 @@ public class BorderLayout extends Layout {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void layoutContainer(Container target) {
         Style s = target.getStyle();
-        int top = s.getPadding(false, Component.TOP);
-        int bottom = target.getLayoutHeight() - target.getBottomGap() - s.getPadding(false, Component.BOTTOM);
-        int left = s.getPadding(target.isRTL(), Component.LEFT);
-        int right = target.getLayoutWidth() - target.getSideGap() - s.getPadding(target.isRTL(), Component.RIGHT);
+        int top = s.getPaddingTop();
+        int bottom = target.getLayoutHeight() - target.getBottomGap() - s.getPaddingBottom();
+        int left = s.getPaddingLeft(target.isRTL());
+        int right = target.getLayoutWidth() - target.getSideGap() - s.getPaddingRight(target.isRTL());
         int targetWidth = target.getWidth();
         int targetHeight = target.getHeight();
 
@@ -216,14 +282,14 @@ public class BorderLayout extends Layout {
         if (north != null) {
             Component c = north;
             positionTopBottom(target, c, right, left, targetHeight);
-            c.setY(top + c.getStyle().getMargin(false, Component.TOP));
-            top += (c.getHeight() + c.getStyle().getMargin(false, Component.TOP) + c.getStyle().getMargin(false, Component.BOTTOM));
+            c.setY(top + c.getStyle().getMarginTop());
+            top += (c.getHeight() + c.getStyle().getMarginTop() + c.getStyle().getMarginBottom());
         }
         if (south != null) {
             Component c = south;
             positionTopBottom(target, c, right, left, targetHeight);
-            c.setY(bottom - c.getHeight() - c.getStyle().getMargin(false, Component.BOTTOM));
-            bottom -= (c.getHeight() + c.getStyle().getMargin(false, Component.TOP) + c.getStyle().getMargin(false, Component.BOTTOM));
+            c.setY(bottom - c.getHeight() - c.getStyle().getMarginBottom());
+            bottom -= (c.getHeight() + c.getStyle().getMarginTop() + c.getStyle().getMarginBottom());
         }
 
         Component realEast = east;
@@ -237,26 +303,26 @@ public class BorderLayout extends Layout {
         if (realEast != null) {
             Component c = realEast;
             positionLeftRight(realEast, targetWidth, bottom, top);
-            c.setX(right - c.getWidth() - c.getStyle().getMargin(target.isRTL(), Component.RIGHT));
-            right -= (c.getWidth() + c.getStyle().getMargin(false, Component.LEFT) + c.getStyle().getMargin(false, Component.RIGHT));
+            c.setX(right - c.getWidth() - c.getStyle().getMarginRight(rtl));
+            right -= (c.getWidth() + c.getStyle().getHorizontalMargins());
         }
         if (realWest != null) {
             Component c = realWest;
             positionLeftRight(realWest, targetWidth, bottom, top);
-            c.setX(left + c.getStyle().getMargin(target.isRTL(), Component.LEFT));
-            left += (c.getWidth() + c.getStyle().getMargin(false, Component.LEFT) + c.getStyle().getMargin(false, Component.RIGHT));
+            c.setX(left + c.getStyle().getMarginLeft(rtl));
+            left += (c.getWidth() + c.getStyle().getMarginLeftNoRTL() + c.getStyle().getMarginRightNoRTL());
         }
         if (center != null) {
             Component c = center;
-            int w = right - left - c.getStyle().getMargin(false, Component.LEFT) - c.getStyle().getMargin(false, Component.RIGHT);
-            int h = bottom - top - c.getStyle().getMargin(false, Component.TOP) - c.getStyle().getMargin(false, Component.BOTTOM);
-            int x = left + c.getStyle().getMargin(target.isRTL(), Component.LEFT);
-            int y = top + c.getStyle().getMargin(false, Component.TOP);
+            int w = right - left - c.getStyle().getMarginLeftNoRTL() - c.getStyle().getMarginRightNoRTL();
+            int h = bottom - top - c.getStyle().getMarginTop() - c.getStyle().getMarginBottom();
+            int x = left + c.getStyle().getMarginLeft(rtl);
+            int y = top + c.getStyle().getMarginTop();
             switch(centerBehavior) {
                 case CENTER_BEHAVIOR_CENTER_ABSOLUTE: {
                     Dimension d = c.getPreferredSize();
                     if(d.getWidth() < w) {
-                        int newX = s.getPadding(target.isRTL(), Component.LEFT) + targetWidth / 2 - d.getWidth() / 2;
+                        int newX = (s.getPaddingLeft(rtl) - s.getPaddingRight(rtl) ) + targetWidth / 2 - d.getWidth() / 2;
                         if(newX > x) {
                             x = newX;
                         }
@@ -273,7 +339,7 @@ public class BorderLayout extends Layout {
                         append += south.getHeight();
                     }
                     if(d.getHeight() < h) {
-                        int newY = (s.getPadding(false, Component.TOP) + th) / 2 - d.getHeight() / 2 + append;
+                        int newY = (s.getPaddingTop() + th) / 2 - d.getHeight() / 2 + append;
                         if(newY > y) {
                             y = newY;
                         }
@@ -296,8 +362,8 @@ public class BorderLayout extends Layout {
                 case CENTER_BEHAVIOR_TOTAL_BELOW: {
                     w = targetWidth;
                     h = targetHeight;
-                    x = s.getPadding(target.isRTL(), Component.LEFT);
-                    y = s.getPadding(false, Component.TOP);;
+                    x = s.getPaddingLeft(rtl);
+                    y = s.getPaddingTop();;
                 }
             } 
             c.setWidth(w);
@@ -311,8 +377,8 @@ public class BorderLayout extends Layout {
      * Position the east/west component variables
      */
     private void positionLeftRight(Component c, int targetWidth, int bottom, int top) {
-        int y = top + c.getStyle().getMargin(false, Component.TOP);
-        int h = bottom - top - c.getStyle().getMargin(false, Component.TOP) - c.getStyle().getMargin(false, Component.BOTTOM);
+        int y = top + c.getStyle().getMarginTop();
+        int h = bottom - top - c.getStyle().getMarginTop() - c.getStyle().getMarginBottom();
         if(scaleEdges) {
             c.setY(y);
             c.setHeight(h); 
@@ -330,8 +396,8 @@ public class BorderLayout extends Layout {
     }
     
     private void positionTopBottom(Component target, Component c, int right, int left, int targetHeight) {
-        int w = right - left - c.getStyle().getMargin(false, Component.LEFT) - c.getStyle().getMargin(false, Component.RIGHT);
-        int x = left + c.getStyle().getMargin(target.isRTL(), Component.LEFT);
+        int w = right - left - c.getStyle().getMarginLeftNoRTL() - c.getStyle().getMarginRightNoRTL();
+        int x = left + c.getStyle().getMarginLeft(target.isRTL());
         if(scaleEdges) {
             c.setWidth(w);
             c.setX(x);
@@ -351,7 +417,7 @@ public class BorderLayout extends Layout {
     private Dimension dim = new Dimension(0, 0);
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getPreferredSize(Container parent) {
         dim.setWidth(0);
@@ -363,35 +429,35 @@ public class BorderLayout extends Layout {
         Component center = getCenter();
 
         if (east != null) {
-            dim.setWidth(east.getPreferredW() + east.getStyle().getMargin(false, Component.LEFT) + east.getStyle().getMargin(false, Component.RIGHT));
-            dim.setHeight(Math.max(east.getPreferredH() + east.getStyle().getMargin(false, Component.TOP) + east.getStyle().getMargin(false, Component.BOTTOM), dim.getHeight()));
+            dim.setWidth(east.getPreferredW() + east.getStyle().getMarginLeftNoRTL() + east.getStyle().getMarginRightNoRTL());
+            dim.setHeight(Math.max(east.getPreferredH() + east.getStyle().getMarginTop() + east.getStyle().getMarginBottom(), dim.getHeight()));
         }
         if (west != null) {
-            dim.setWidth(dim.getWidth() + west.getPreferredW() + west.getStyle().getMargin(false, Component.LEFT) + west.getStyle().getMargin(false, Component.RIGHT));
-            dim.setHeight(Math.max(west.getPreferredH() + west.getStyle().getMargin(false, Component.TOP) + west.getStyle().getMargin(false, Component.BOTTOM), dim.getHeight()));
+            dim.setWidth(dim.getWidth() + west.getPreferredW() + west.getStyle().getMarginLeftNoRTL() + west.getStyle().getMarginRightNoRTL());
+            dim.setHeight(Math.max(west.getPreferredH() + west.getStyle().getMarginTop() + west.getStyle().getMarginBottom(), dim.getHeight()));
         }
         if (center != null) {
-            dim.setWidth(dim.getWidth() + center.getPreferredW() + center.getStyle().getMargin(false, Component.LEFT) + center.getStyle().getMargin(false, Component.RIGHT));
-            dim.setHeight(Math.max(center.getPreferredH() + center.getStyle().getMargin(false, Component.TOP) + center.getStyle().getMargin(false, Component.BOTTOM), dim.getHeight()));
+            dim.setWidth(dim.getWidth() + center.getPreferredW() + center.getStyle().getMarginLeftNoRTL() + center.getStyle().getMarginRightNoRTL());
+            dim.setHeight(Math.max(center.getPreferredH() + center.getStyle().getMarginTop() + center.getStyle().getMarginBottom(), dim.getHeight()));
         }
         if (north != null) {
-            dim.setWidth(Math.max(north.getPreferredW() + north.getStyle().getMargin(false, Component.LEFT) + north.getStyle().getMargin(false, Component.RIGHT), dim.getWidth()));
-            dim.setHeight(dim.getHeight() + north.getPreferredH() + north.getStyle().getMargin(false, Component.TOP) + north.getStyle().getMargin(false, Component.BOTTOM));
+            dim.setWidth(Math.max(north.getPreferredW() + north.getStyle().getMarginLeftNoRTL() + north.getStyle().getMarginRightNoRTL(), dim.getWidth()));
+            dim.setHeight(dim.getHeight() + north.getPreferredH() + north.getStyle().getMarginTop() + north.getStyle().getMarginBottom());
         }
 
         if (south != null) {
-            dim.setWidth(Math.max(south.getPreferredW() + south.getStyle().getMargin(false, Component.LEFT) + south.getStyle().getMargin(false, Component.RIGHT), dim.getWidth()));
-            dim.setHeight(dim.getHeight() + south.getPreferredH() + south.getStyle().getMargin(false, Component.TOP) + south.getStyle().getMargin(false, Component.BOTTOM));
+            dim.setWidth(Math.max(south.getPreferredW() + south.getStyle().getMarginLeftNoRTL() + south.getStyle().getMarginRightNoRTL(), dim.getWidth()));
+            dim.setHeight(dim.getHeight() + south.getPreferredH() + south.getStyle().getMarginTop() + south.getStyle().getMarginBottom());
         }
 
-        dim.setWidth(dim.getWidth() + parent.getStyle().getPadding(false, Component.LEFT) + parent.getStyle().getPadding(false, Component.RIGHT));
-        dim.setHeight(dim.getHeight() + parent.getStyle().getPadding(false, Component.TOP) + parent.getStyle().getPadding(false, Component.BOTTOM));
+        dim.setWidth(dim.getWidth() + parent.getStyle().getPaddingLeftNoRTL() + parent.getStyle().getPaddingRightNoRTL());
+        dim.setHeight(dim.getHeight() + parent.getStyle().getPaddingTop() + parent.getStyle().getPaddingBottom());
         return dim;
     }
 
     private boolean isLandscape() {
         Display d = Display.getInstance();
-        return d.getDisplayWidth() > d.getDisplayHeight();
+        return !d.isPortrait();
     }
 
     /**
@@ -474,7 +540,7 @@ public class BorderLayout extends Layout {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String toString() {
         return "BorderLayout";
@@ -511,7 +577,7 @@ public class BorderLayout extends Layout {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean equals(Object o) {
         if(super.equals(o) && centerBehavior == ((BorderLayout)o).centerBehavior) {
@@ -568,7 +634,7 @@ public class BorderLayout extends Layout {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean isOverlapSupported(){
         return centerBehavior == CENTER_BEHAVIOR_TOTAL_BELOW;
@@ -591,16 +657,120 @@ public class BorderLayout extends Layout {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean isConstraintTracking() {
         return false;
     }    
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean obscuresPotential(Container parent) {
         return getCenter() != null;
+    }
+    
+    /**
+     * Convenience method that creates a border layout container and places the given component in the center
+     * @param center the center component
+     * @return the created component
+     */
+    public static Container center(Component center) {
+        return Container.encloseIn(new BorderLayout(), center, BorderLayout.CENTER);
+    }
+
+    /**
+     * Convenience method that creates a border layout container and places the given component in the center
+     * east and west respectively
+     * @param center the center component
+     * @param east component or null to ignore
+     * @param west component or null to ignore
+     * @return the created component
+     */
+    public static Container centerEastWest(Component center, Component east, Component west) {
+        Container c = center(center);
+        if(east != null) {
+            c.add(BorderLayout.EAST, east);
+        }
+        if(west != null) {
+            c.add(BorderLayout.WEST, west);
+        }
+        return c;
+    }
+    
+    /**
+     * Convenience method that creates a border layout absolute center container and places the given component in the center
+     * east and west respectively
+     * @param center the center component
+     * @param east component or null to ignore
+     * @param west component or null to ignore
+     * @return the created component
+     */
+    public static Container centerAbsoluteEastWest(Component center, Component east, Component west) {
+        Container c = centerAbsolute(center);
+        if(east != null) {
+            c.add(BorderLayout.EAST, east);
+        }
+        if(west != null) {
+            c.add(BorderLayout.WEST, west);
+        }
+        return c;
+    }
+    
+    /**
+     * Convenience method that creates a border layout container and places the given component in the center
+     * with the {@link  #CENTER_BEHAVIOR_CENTER} constraint applied
+     * @param center the center component
+     * @return the created component
+     */
+    public static Container centerCenter(Component center) {
+        return Container.encloseIn(new BorderLayout(CENTER_BEHAVIOR_CENTER), center, BorderLayout.CENTER);
+    }
+
+    /**
+     * Convenience method that creates a border layout container and places the given component in the center
+     * with the {@link  #CENTER_BEHAVIOR_CENTER_ABSOLUTE} constraint applied
+     * @param center the center component
+     * @return the created component
+     */
+    public static Container centerAbsolute(Component center) {
+        return Container.encloseIn(new BorderLayout(CENTER_BEHAVIOR_CENTER_ABSOLUTE), center, BorderLayout.CENTER);
+    }
+
+    /**
+     * Convenience method that creates a border layout container and places the given component in the north
+     * @param north the north component
+     * @return the created component
+     */
+    public static Container north(Component north) {
+        return Container.encloseIn(new BorderLayout(), north, BorderLayout.NORTH);
+    }
+
+    /**
+     * Convenience method that creates a border layout container and places the given component in the south
+     * @param south the south component
+     * @return the created component
+     */
+    public static Container south(Component south) {
+        return Container.encloseIn(new BorderLayout(), south, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Convenience method that creates a border layout container and places the given component in the east
+     * @param east the east component
+     * @return the created component
+     */
+    public static Container east(Component east) {
+        return Container.encloseIn(new BorderLayout(), east, BorderLayout.EAST);
+    }
+
+
+    /**
+     * Convenience method that creates a border layout container and places the given component in the west
+     * @param west the west component
+     * @return the created component
+     */
+    public static Container west(Component west) {
+        return Container.encloseIn(new BorderLayout(), west, BorderLayout.WEST);
     }
 }

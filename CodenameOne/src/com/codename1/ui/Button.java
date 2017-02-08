@@ -29,7 +29,6 @@ import com.codename1.ui.geom.Dimension;
 import com.codename1.ui.events.ActionEvent;
 import com.codename1.ui.events.ActionListener;
 import com.codename1.ui.plaf.Border;
-import com.codename1.ui.plaf.Style;
 import com.codename1.ui.plaf.UIManager;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,9 +36,23 @@ import java.util.Vector;
 
 
 /**
- * Button is the base class for several UI widgets allowing clickability.
- * It has 3 states: rollover, pressed and the default state it 
- * can also have ActionListeners that react when the Button is clicked.
+ * <p>Button is the base class for several UI widgets allowing clickability.
+ * It has 3 states: rollover, pressed and the default state. {@code Button}
+ * can also have an {@link com.codename1.ui.events.ActionListener} that react when the 
+ * {@code Button} is clicked or handle actions via a 
+ * {@link com.codename1.ui.Command}.<br>
+ * Button has the "Button" UIID by default.</p>
+ * <p>
+ * Here is trivial usage of the {@code Button} API:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/99cdefe0c73096ebdbfb.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-button.png" alt="Simple Button" />
+ * 
+ * <p>
+ * This code shows a common use case of making a button look like a hyperlink
+ * </p>
+ * <script src="https://gist.github.com/codenameone/2627b4edc5d3d340ce90.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-link-button.png" alt="Hyperlink Button" />
  * 
  * @author Chen Fishbein
  */
@@ -124,11 +137,13 @@ public class Button extends Label {
             removeActionListener(this.cmd);
         }
         this.cmd = cmd;
-        setText(cmd.getCommandName());
-        setIcon(cmd.getIcon());
-        setEnabled(cmd.isEnabled());
-        updateCommand();
-        addActionListener(cmd);
+        if(cmd != null) {
+            setText(cmd.getCommandName());
+            setIcon(cmd.getIcon());
+            setEnabled(cmd.isEnabled());
+            updateCommand();
+            addActionListener(cmd);
+        }
     }
 
     /**
@@ -157,14 +172,14 @@ public class Button extends Label {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void resetFocusable() {
         setFocusable(true);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     void focusGainedInternal() {
         super.focusGainedInternal();
@@ -174,7 +189,7 @@ public class Button extends Label {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     void focusLostInternal() {
         super.focusLostInternal();
@@ -378,9 +393,13 @@ public class Button extends Label {
     }
 
     /**
-     * @inheritDoc
+     * Allows subclasses to override action event behavior 
+     * {@inheritDoc}
+     * 
+     * @param x the x position of the click if applicable (can be 0 or -1 otherwise)
+     * @param y the y position of the click if applicable (can be 0 or -1 otherwise)
      */
-    void fireActionEvent(int x, int y){
+    protected void fireActionEvent(int x, int y){
         super.fireActionEvent();
         if(cmd != null) {
             ActionEvent ev = new ActionEvent(cmd, this, x, y);
@@ -392,7 +411,7 @@ public class Button extends Label {
                 }
             }
         } else {
-            dispatcher.fireActionEvent(new ActionEvent(this, x, y));
+            dispatcher.fireActionEvent(new ActionEvent(this, ActionEvent.Type.PointerPressed,x, y));
         }
         Display d = Display.getInstance();
         if(d.isBuiltinSoundsEnabled()) {
@@ -423,12 +442,14 @@ public class Button extends Label {
      */
     public void released(int x, int y) {
         state=STATE_ROLLOVER;
-        fireActionEvent(x, y);
+        if (!Display.impl.isScrollWheeling()) {
+            fireActionEvent(x, y);
+        }
         repaint();
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyPressed(int keyCode) {
         if (Display.getInstance().getGameAction(keyCode) == Display.GAME_FIRE){
@@ -437,7 +458,7 @@ public class Button extends Label {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyReleased(int keyCode) {
         if (Display.getInstance().getGameAction(keyCode) == Display.GAME_FIRE){
@@ -446,13 +467,13 @@ public class Button extends Label {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyRepeated(int keyCode) {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void fireClicked() {
         pressed();
@@ -460,32 +481,35 @@ public class Button extends Label {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected boolean isSelectableInteraction() {
         return true;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerHover(int[] x, int[] y) {
         requestFocus();
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerHoverReleased(int[] x, int[] y) {
         requestFocus();
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerPressed(int x, int y) {
         clearDrag();
         setDragActivated(false);
+        if (pointerPressedListeners != null && pointerPressedListeners.hasListeners()) {
+            pointerPressedListeners.fireActionEvent(new ActionEvent(this, ActionEvent.Type.PointerPressed, x, y));
+        }
         pressed();
         Form f = getComponentForm();
         // might happen when programmatically triggering press
@@ -498,9 +522,16 @@ public class Button extends Label {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerReleased(int x, int y) {
+        if (pointerReleasedListeners != null && pointerReleasedListeners.hasListeners()) {
+            ActionEvent ev = new ActionEvent(this, ActionEvent.Type.PointerReleased, x, y);
+            pointerReleasedListeners.fireActionEvent(ev);
+            if(ev.isConsumed()) {
+                return;
+            }
+        }
         Form f = getComponentForm();
         // might happen when programmatically triggering press
         if(f != null) {
@@ -512,14 +543,14 @@ public class Button extends Label {
         // button shouldn't fire an event when a pointer is dragged into it
         if(state == STATE_PRESSED) {
             released(x, y);
-        }
+         }
         if(restoreDragPercentage > -1) {
             Display.getInstance().setDragStartPercentage(restoreDragPercentage);
         }
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void dragInitiated() {
         if(Display.getInstance().shouldRenderSelection(this)) {
@@ -530,8 +561,43 @@ public class Button extends Label {
         repaint();
     }
 
+    @Override
+    void initComponentImpl() {
+        super.initComponentImpl(); 
+        if(pressedIcon != null) {
+            pressedIcon.lock();
+        }
+        if(rolloverIcon != null) {
+            rolloverIcon.lock();
+        }
+        if(rolloverPressedIcon != null) {
+            rolloverPressedIcon.lock();
+        }
+        if(disabledIcon != null) {
+            disabledIcon.lock();
+        }
+    }
+
+    @Override
+    void deinitializeImpl() {
+        super.deinitializeImpl(); 
+        if(pressedIcon != null) {
+            pressedIcon.unlock();
+        }
+        if(rolloverIcon != null) {
+            rolloverIcon.unlock();
+        }
+        if(rolloverPressedIcon != null) {
+            rolloverPressedIcon.unlock();
+        }
+        if(disabledIcon != null) {
+            disabledIcon.unlock();
+        }
+    }
+
+    
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerDragged(int x, int y) {
         // this releases buttons on drag instead of keeping them pressed making them harder to click
@@ -543,23 +609,17 @@ public class Button extends Label {
         }*/
         super.pointerDragged(x, y);
     }
-
-    /**
-     * @inheritDoc
-     */
-    public void paint(Graphics g) {
-        getUIManager().getLookAndFeel().drawButton(g, this);
-    }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected Dimension calcPreferredSize(){
+        calcSizeAutoSize();
         return getUIManager().getLookAndFeel().getButtonPreferredSize(this);
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected Border getBorder() {
         return getStyle().getBorder();
@@ -597,7 +657,7 @@ public class Button extends Label {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      * @deprecated use the Style alignment instead
      */
     public void setAlignment(int align){
@@ -630,7 +690,7 @@ public class Button extends Label {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean animate() {
         boolean a = super.animate();
@@ -697,4 +757,15 @@ public class Button extends Label {
     public void setAutoRelease(boolean autoRelease){
         this.autoRelease = autoRelease;
     }
+
+    @Override
+    public void paint(Graphics g) {
+        if(isLegacyRenderer()) {
+            initAutoResize();
+            getUIManager().getLookAndFeel().drawButton(g, this);
+            return;
+        }
+        super.paintImpl(g);
+    }
+
 }

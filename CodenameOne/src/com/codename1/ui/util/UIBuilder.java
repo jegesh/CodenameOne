@@ -235,7 +235,7 @@ public class UIBuilder { //implements Externalizable {
     // used by the resource editor
     static boolean ignorBaseForm;
 
-    private Vector baseFormNavigationStack = new Vector();
+    Vector baseFormNavigationStack = new Vector();
     private Vector backCommands;
 
     /**
@@ -648,7 +648,7 @@ public class UIBuilder { //implements Externalizable {
         }
         if(listener instanceof DataChangedListener) {
             if(cmp instanceof TextField) {
-                ((TextField)cmp).addDataChangeListener((DataChangedListener)listener);
+                ((TextField)cmp).addDataChangedListener((DataChangedListener)listener);
                 return;
             }
             ((Slider)cmp).addDataChangedListener((DataChangedListener)listener);
@@ -762,7 +762,8 @@ public class UIBuilder { //implements Externalizable {
 
     private Object[] readObjectArrayForListModel(DataInputStream in, Resources res) throws IOException {
         Object[] elements = new Object[in.readInt()];
-        for(int iter = 0 ; iter < elements.length ; iter++) {
+        int elen = elements.length;
+        for(int iter = 0 ; iter < elen ; iter++) {
             switch(in.readByte()) {
                 case 1: // String
                     elements[iter] = in.readUTF();
@@ -913,7 +914,8 @@ public class UIBuilder { //implements Externalizable {
             // resource might have been removed we need to fail gracefully
             String[] uiNames = res.getUIResourceNames();
             String currentName = in.readUTF();
-            for(int iter = 0 ; iter < uiNames.length ; iter++) {
+            int ulen = uiNames.length;
+            for(int iter = 0 ; iter < ulen ; iter++) {
                 if(uiNames[iter].equals(currentName)) {
                     return createContainer(res, currentName);
                 }
@@ -1425,7 +1427,7 @@ public class UIBuilder { //implements Externalizable {
                         items[iter] = in.readUTF();
                     }
                     if(!setListModel(((List)cmp))) {
-                        ((List)cmp).setModel(new DefaultListModel(items));
+                        ((List)cmp).setModel(new DefaultListModel((Object[])items));
                     }
                     break;
 
@@ -2155,10 +2157,14 @@ public class UIBuilder { //implements Externalizable {
      * @param backCommand the back command 
      */
     protected void setBackCommand(Form f, Command backCommand) {
-        if(shouldAddBackCommandToMenu()) {
-            f.addCommand(backCommand, f.getCommandCount());
+        if(f.getToolbar() != null) {
+            f.getToolbar().setBackCommand(backCommand);
+        } else {
+            if(shouldAddBackCommandToMenu()) {
+                f.addCommand(backCommand, f.getCommandCount());
+            }
+            f.setBackCommand(backCommand);
         }
-        f.setBackCommand(backCommand);
     }
     
     private void initBackForm(Form f) {
@@ -2361,6 +2367,7 @@ public class UIBuilder { //implements Externalizable {
         }
         return cnt;
     }
+    
 
     /**
      * This is useful for swipe back navigation behavior
@@ -2380,29 +2387,8 @@ public class UIBuilder { //implements Externalizable {
             cmd.putClientProperty(COMMAND_ARGUMENTS, "");
             cmd.putClientProperty(COMMAND_ACTION, commandAction);
         }
-        final Object ho =  p;
-        final Command backCommand = cmd;
-        
-        return new LazyValue<Form>() {
-            public Form get(Object... args) {
-                String n = getPreviousFormName(f);
-                final Form f = createForm((Form)createContainer(fetchResourceFile(), n));;
-                Hashtable h =  (Hashtable)ho;
-                if(h != null) {
-                    setFormState(f, h);
-                    setBackCommand(f, backCommand);
-                }
-                f.addShowListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent evt) {
-                        postShow(f);
-                    }
-                });
-                Vector formNavigationStack = baseFormNavigationStack;
-                formNavigationStack.remove(formNavigationStack.size() - 1);
-                beforeShow(f);
-                return f;
-            }
-        };
+
+        return new LazyValueC(f, p, cmd, this);
     }
 
     Form createForm(Form f) {
@@ -2689,7 +2675,7 @@ public class UIBuilder { //implements Externalizable {
     }
 
     /**
-     * Returns either the parent form or the component bellow the embedded container
+     * Returns either the parent form or the component below the embedded container
      * above c.
      * 
      * @param c the component whose root ancestor we should find
@@ -2706,7 +2692,7 @@ public class UIBuilder { //implements Externalizable {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     /*public final int getVersion() {
         return 1;
@@ -2733,7 +2719,7 @@ public class UIBuilder { //implements Externalizable {
     }*/
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     /*public final void externalize(DataOutputStream out) throws IOException {
         Util.writeObject(baseFormNavigationStack, out);
@@ -2761,7 +2747,7 @@ public class UIBuilder { //implements Externalizable {
     //}
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     /*public final void internalize(int version, DataInputStream in) throws IOException {
         baseFormNavigationStack = (Vector)Util.readObject(in);
@@ -2770,7 +2756,7 @@ public class UIBuilder { //implements Externalizable {
     }*/
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     /*public String getObjectId() {
         return "StateMachine";
@@ -2920,5 +2906,35 @@ public class UIBuilder { //implements Externalizable {
                 showContainer(action, cmd, evt.getComponent());
             }
         }
+    }
+}
+
+class LazyValueC implements LazyValue<Form> {
+    private Hashtable h;
+    private Form f;
+    private Command backCommand;
+    private UIBuilder parent;
+    public LazyValueC(Form f, Hashtable h, Command backCommand, UIBuilder parent) {
+        this.h = h;
+        this.f = f;
+        this.backCommand = backCommand;
+        this.parent = parent;
+    }
+    public Form get(Object... args) {
+        String n = parent.getPreviousFormName(f);
+        final Form f = parent.createForm((Form)parent.createContainer(parent.fetchResourceFile(), n));;
+        if(h != null) {
+            parent.setFormState(f, h);
+            parent.setBackCommand(f, backCommand);
+        }
+        f.addShowListener(new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                parent.postShow(f);
+            }
+        });
+        Vector formNavigationStack = parent.baseFormNavigationStack;
+        formNavigationStack.remove(formNavigationStack.size() - 1);
+        parent.beforeShow(f);
+        return f;
     }
 }

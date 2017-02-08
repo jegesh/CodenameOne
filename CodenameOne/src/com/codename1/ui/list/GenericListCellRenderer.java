@@ -37,6 +37,7 @@ import com.codename1.ui.Image;
 import com.codename1.ui.Label;
 import com.codename1.ui.List;
 import com.codename1.ui.RadioButton;
+import com.codename1.ui.Slider;
 import com.codename1.ui.TextArea;
 import com.codename1.ui.URLImage;
 import com.codename1.ui.animations.Animation;
@@ -48,16 +49,25 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
- * The generic list cell renderer can display containers or arbitrary Codename One components
- * as items in a list. It generally relies on the source data being either a Map a CloudObject or
- * a list of Strings. It extracts values from the Map using the component name as
- * an indication to the Map key lookup.
- * This renderer supports label tickering, check boxes/radio buttons etc. seamlessly.
- * Please notice that you must use at least two distinguished instances of the component
- * to render, reusing the same instance WILL NOT WORK.
- * Also the renderer instance cannot be reused for multiple lists, each list will need
- * a new instance of this renderer!
+ * <p>The generic list cell renderer can display containers or arbitrary Codename One components
+ * as items in a list, <b>notice</b> that 
+ * <a href="https://www.codenameone.com/blog/avoiding-lists.html">we strongly
+ * discourage usage of lists</a>.. It relies on the source data being a {@code Map} object. It extracts values from 
+ * the {@code Map} using the component name as an indication to the Map key lookup.<br>
+ * This renderer supports label tickering, check boxes/radio buttons etc. seamlessly.</p>
+ * <p>
+ * Please notice that you must use at least two distinct instances of the component
+ * when passing them to the constructor, reusing the same instance <b>WILL NOT WORK!</b><br>
+ * Furthermore, the renderer instance cannot be reused for multiple lists, each list will need
+ * a new instance of this renderer!</p>
+ * <p>
+ * Sample usage for this renderer follows:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/15a2370c500e07a8fcf8.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-generic-list-cell-renderer.png" alt="Sample of using the generic list cell renderer" />
  *
+ * <script src="https://gist.github.com/codenameone/15a2370c500e07a8fcf8.js"></script>
+ * 
  * @author Shai Almog
  */
 public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRenderer<T> {
@@ -140,6 +150,12 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
         addSelectedEntriesListener(unselectedEntries);
     }
 
+    void deinitialize(List l) {
+        removeSelectedEntriesListener(selectedEntries);
+        removeSelectedEntriesListener(unselectedEntries);
+        l.removeActionListener(mon);
+    }
+     
     /**
      * Updates the placeholder instances, this is useful for changing the URLImage placeholder in runtime as
      * might happen in the designer
@@ -150,7 +166,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
     }
     
     private void updateIconPlaceholders(Component[] e) {
-        for(int iter = 0 ; iter < e.length ; iter++) {
+        int elen = e.length;
+        for(int iter = 0 ; iter < elen ; iter++) {
             String n = e[iter].getName();
             if(n != null) {
                 if(n.endsWith("_URLImage") && e[iter] instanceof Label) {
@@ -159,9 +176,19 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
             }
         }
     }
+
+    private void removeSelectedEntriesListener(Component[] e) {
+        int elen = e.length;
+        for(int iter = 0 ; iter < elen ; iter++) {
+            if(e[iter] instanceof Button) {
+                ((Button)e[iter]).removeActionListener(mon);
+            }
+        }
+    }
     
     private void addSelectedEntriesListener(Component[] e) {
-        for(int iter = 0 ; iter < e.length ; iter++) {
+        int elen = e.length;
+        for(int iter = 0 ; iter < elen ; iter++) {
             if(e[iter] instanceof Button) {
                 ((Button)e[iter]).addActionListener(mon);
             }
@@ -218,10 +245,13 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
         addSelectedEntriesListener(selectedEntriesEven);
         addSelectedEntriesListener(unselectedEntriesEven);
     }
+    
+    
 
     private Component[] vectorToComponentArray(ArrayList v) {
         Component[] result = new Component[v.size()];
-        for(int iter = 0 ; iter < result.length ; iter++) {
+        int rlen = result.length;
+        for(int iter = 0 ; iter < rlen ; iter++) {
             result[iter] = (Component)v.get(iter);
         }
         return result;
@@ -254,7 +284,7 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getCellRendererComponent(Component list, Object model, T value, int index, boolean isSelected) {
         Component cmp;
@@ -285,7 +315,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                 if(enabled != null) {
                     cmp.setEnabled(enabled.booleanValue());
                 }
-                for(int iter = 0 ; iter < entries.length ; iter++) {
+                int elen = entries.length;
+                for(int iter = 0 ; iter < elen ; iter++) {
                     String currentName = entries[iter].getName();
 
                     Object val;
@@ -299,7 +330,7 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                             val = h.get(currentName);
                         }
                         val = updateModelValues(h, currentName, entries, iter, val);
-                    }
+                    }                    
                     setComponentValueWithTickering(entries[iter], val, list, cmp);
                     entries[iter].setFocus(lead || entries[iter].isFocusable());
                 }
@@ -310,7 +341,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                     if(enabled != null) {
                         cmp.setEnabled(enabled.booleanValue());
                     }
-                    for(int iter = 0 ; iter < entries.length ; iter++) {
+                    int elen = entries.length;
+                    for(int iter = 0 ; iter < elen ; iter++) {
                         String currentName = entries[iter].getName();
 
                         Object val;
@@ -352,7 +384,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                 if(enabled != null) {
                     cmp.setEnabled(enabled.booleanValue());
                 }
-                for(int iter = 0 ; iter < entries.length ; iter++) {
+                int elen = entries.length;
+                for(int iter = 0 ; iter < elen ; iter++) {
                     String currentName = entries[iter].getName();
                     if(currentName.equals("$number")) {
                         setComponentValue(entries[iter], "" + (index + 1), list, cmp);
@@ -369,7 +402,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                     if(enabled != null) {
                         cmp.setEnabled(enabled.booleanValue());
                     }
-                    for(int iter = 0 ; iter < entries.length ; iter++) {
+                    int elen = entries.length;
+                    for(int iter = 0 ; iter < elen ; iter++) {
                         String currentName = entries[iter].getName();
                         if(currentName.equals("$number")) {
                             setComponentValue(entries[iter], "" + (index + 1), list, cmp);
@@ -378,7 +412,9 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                         setComponentValue(entries[iter], h.getObject(currentName), list, cmp);
                     }
                 } else {
-                    setComponentValue(entries[0], value, list, cmp);
+                    if(entries.length > 0) {
+                        setComponentValue(entries[0], value, list, cmp);
+                    }
                 }
             }
             return cmp;
@@ -409,7 +445,7 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
 
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getListCellRendererComponent(List list, T value, int index, boolean isSelected) {
         return getCellRendererComponent(list, list.getModel(), value, index, isSelected);
@@ -514,6 +550,10 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                 ((RadioButton)cmp).setSelected(isSelectedValue(value));
                 return;
             }
+            if(cmp instanceof Slider) {
+                ((Slider)cmp).setProgress(((Integer)value).intValue());
+                return;
+            }
 
             Label l = (Label)cmp;
             if(value == null) {
@@ -544,14 +584,14 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getListFocusComponent(List list) {
         return focusComponent;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getFocusComponent(Component list) {
         return focusComponent;
@@ -642,7 +682,7 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
         private int selectAllOffset;
         
         /**
-         * @inheritDoc
+         * {@inheritDoc}
          */
         public boolean animate() {
             boolean hasAnimations = false;
@@ -667,7 +707,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                 Form f = parentList.getComponentForm();
                 if(f != null) {
                     if(parentList.hasFocus() && Display.getInstance().shouldRenderSelection(parentList)) {
-                        for(int iter = 0 ; iter < selectedEntries.length ; iter++) {
+                        int slen = selectedEntries.length;
+                        for(int iter = 0 ; iter < slen ; iter++) {
                             if(selectedEntries[iter] instanceof Label) {
                                 Label l = (Label)selectedEntries[iter];
                                 if(l.isTickerRunning()) {
@@ -677,7 +718,8 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                             }
                         }
                     } else {
-                        for(int iter = 0 ; iter < selectedEntries.length ; iter++) {
+                        int slen = selectedEntries.length;
+                        for(int iter = 0 ; iter < slen ; iter++) {
                             if(selectedEntries[iter] instanceof Label) {
                                 Label l = (Label)selectedEntries[iter];
                                 if(l.isTickerRunning()) {
@@ -704,13 +746,13 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
         }
 
         /**
-         * @inheritDoc
+         * {@inheritDoc}
          */
         public void paint(Graphics g) {
         }
 
         /**
-         * @inheritDoc
+         * {@inheritDoc}
          */
         public void actionPerformed(ActionEvent evt) {
             if(evt.getComponent() instanceof Button) {
@@ -725,10 +767,11 @@ public class GenericListCellRenderer<T> implements ListCellRenderer<T>, CellRend
                     Map h = (Map)selection;
                     Command cmd = (Command)h.get("$navigation");
                     if(cmd != null) {
-                        parentList.getComponentForm().dispatchCommand(cmd, new ActionEvent(cmd));
+                        parentList.getComponentForm().dispatchCommand(cmd, new ActionEvent(cmd,ActionEvent.Type.Command));
                         return;
                     }
-                    for(int iter = 0 ; iter < selectedEntries.length ; iter++) {
+                    int slen = selectedEntries.length;
+                    for(int iter = 0 ; iter < slen ; iter++) {
                         if(selectedEntries[iter] instanceof CheckBox ||
                                 selectedEntries[iter] instanceof RadioButton) {
                             boolean sel = !isSelectedValue(h.get(selectedEntries[iter].getName()));

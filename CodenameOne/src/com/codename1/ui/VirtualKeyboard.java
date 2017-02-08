@@ -41,6 +41,7 @@ import java.util.Vector;
  * This class represent the Codename One Light Weight Virtual Keyboard
  * 
  * @author Chen Fishbein
+ * @deprecated this is a part of legacy code, modern devices have the virtual keyboard bound to the native text field
  */
 public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
     private static final String MARKER_COMMIT_ON_DISPOSE = "$VKB_COM$";
@@ -258,14 +259,14 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void show() {
         super.showPacked(BorderLayout.SOUTH, true);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void autoAdjust(int w, int h) {
         //if the t9 input is currently editing do not dispose dialog
@@ -330,22 +331,23 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
             return;
         }
         Button dummy = createButton(new Command("dummy"), 0);
-        int buttonMargins = dummy.getUnselectedStyle().getMargin(dummy.isRTL(), LEFT) +
-                dummy.getUnselectedStyle().getMargin(dummy.isRTL(), RIGHT);
+        int buttonMargins = dummy.getUnselectedStyle().getHorizontalMargins();
         Container row = null;
         int rowW = (Display.getInstance().getDisplayWidth() -
-                getDialogStyle().getPadding(false, LEFT) -
-                getDialogStyle().getPadding(false, RIGHT) -
-                getDialogStyle().getMargin(false, LEFT) -
-                getDialogStyle().getMargin(false, RIGHT));
+                getDialogStyle().getPaddingLeftNoRTL() -
+                getDialogStyle().getPaddingRightNoRTL() -
+                getDialogStyle().getMarginLeftNoRTL() -
+                getDialogStyle().getMarginLeftNoRTL());
         int availableSpace = rowW - length * buttonMargins;
         int buttonSpace = (availableSpace) / length;
-        for (int i = 0; i < currentKeyboardChars.length; i++) {
+        int clen = currentKeyboardChars.length;
+        for (int i = 0; i < clen; i++) {
             int rowWidth = rowW;
             row = new Container(new BoxLayout(BoxLayout.X_AXIS));
             row.getUnselectedStyle().setMargin(0, 0, 0, 0);
             Vector specialsButtons = new Vector();
-            for (int j = 0; j < currentKeyboardChars[i].length; j++) {
+            int cilen = currentKeyboardChars[i].length;
+            for (int j = 0; j < cilen; j++) {
                 String txt = currentKeyboardChars[i][j];
                 Button b = null;
                 if (txt.startsWith("$") && txt.endsWith("$") && txt.length() > 1) {
@@ -510,7 +512,7 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerPressed(int x, int y) {
         super.pointerPressed(x, y);
@@ -521,7 +523,7 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerDragged(int x, int y) {
         super.pointerDragged(x, y);
@@ -532,7 +534,7 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerReleased(int x, int y) {
         if(showTooltips) {
@@ -649,7 +651,7 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
         }
     }
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void actionCommand(Command cmd) {
         super.actionCommand(cmd);
@@ -722,7 +724,7 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
 
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void dispose() {
         if (field != null) {
@@ -740,7 +742,7 @@ public class VirtualKeyboard extends Dialog implements VirtualKeyboardInterface{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void onShow() {
         super.onShow();

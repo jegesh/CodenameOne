@@ -30,7 +30,11 @@ import com.codename1.io.Externalizable;
 import com.codename1.ui.Dialog;
 import com.codename1.ui.Display;
 import com.codename1.ui.EncodedImage;
+import com.codename1.ui.Image;
 import com.codename1.ui.events.ActionListener;
+import com.codename1.util.CallbackAdapter;
+import com.codename1.util.FailureCallback;
+import com.codename1.util.SuccessCallback;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -59,8 +63,6 @@ public class Util {
 
     private static boolean charArrayBugTested;
     private static boolean charArrayBug;
-    private static boolean xmlVMInstanceofBug;
-    private static boolean xmlVMInstanceofBugTested;
 
     static {
         register("EncodedImage", EncodedImage.class);
@@ -103,21 +105,32 @@ public class Util {
     }
 
     /**
+     * Copy the input stream into the output stream, without closing the streams when done
+     *
+     * @param i source
+     * @param o destination
+     * @param bufferSize the size of the buffer, which should be a power of 2 large enough
+     */
+    public static void copyNoClose(InputStream i, OutputStream o, int bufferSize) throws IOException {
+        byte[] buffer = new byte[bufferSize];
+        int size = i.read(buffer);
+        while(size > -1) {
+            o.write(buffer, 0, size);
+            size = i.read(buffer);
+        }
+    }
+    
+    /**
      * Copy the input stream into the output stream, closes both streams when finishing or in
      * a case of an exception
      *
      * @param i source
      * @param o destination
-     * @param bufferSize the size of the buffer, which should be a power of 2 large enoguh
+     * @param bufferSize the size of the buffer, which should be a power of 2 large enough
      */
     public static void copy(InputStream i, OutputStream o, int bufferSize) throws IOException {
         try {
-            byte[] buffer = new byte[bufferSize];
-            int size = i.read(buffer);
-            while(size > -1) {
-                o.write(buffer, 0, size);
-                size = i.read(buffer);
-            }
+            copyNoClose(i, o, bufferSize);
         } finally {
             Util.getImplementation().cleanup(o);
             Util.getImplementation().cleanup(i);
@@ -171,7 +184,12 @@ public class Util {
     }
 
     /**
-     * Registers this externalizable so readObject will be able to load such objects
+     * <p>Registers this externalizable so readObject will be able to load such objects.</p>
+     * <p>
+     * The sample below demonstrates the usage and registration of the {@link com.codename1.io.Externalizable} interface:
+     * </p>
+     * <script src="https://gist.github.com/codenameone/858d8634e3cf1a82a1eb.js"></script>
+     *
      *
      * @param e the externalizable instance
      */
@@ -180,7 +198,12 @@ public class Util {
     }
 
     /**
-     * Registers this externalizable so readObject will be able to load such objects
+     * <p>Registers this externalizable so readObject will be able to load such objects.</p>
+     *
+     * <p>
+     * The sample below demonstrates the usage and registration of the {@link com.codename1.io.Externalizable} interface:
+     * </p>
+     * <script src="https://gist.github.com/codenameone/858d8634e3cf1a82a1eb.js"></script>
      *
      * @param id id of the externalizable
      * @param c the class for the externalizable
@@ -190,7 +213,13 @@ public class Util {
     }
 
     /**
-     * Writes an object to the given output stream
+     * <p>Writes an object to the given output stream, notice that it should be externalizable or one of
+     * the supported types.</p>
+     * 
+     * <p>
+     * The sample below demonstrates the usage and registration of the {@link com.codename1.io.Externalizable} interface:
+     * </p>
+     * <script src="https://gist.github.com/codenameone/858d8634e3cf1a82a1eb.js"></script>
      *
      * @param o the object to write which can be null
      * @param out the destination output stream
@@ -329,11 +358,6 @@ public class Util {
             return;
         }
         
-        if(!xmlVMInstanceofBugTested) {
-            xmlVMInstanceofBug = Display.getInstance().getPlatformName().equals("ios");
-            xmlVMInstanceofBugTested = true;
-        }
-
         if(instanceofObjArray(o)) {
             Object[] v = (Object[])o;
             out.writeUTF("ObjectArray");
@@ -492,7 +516,13 @@ public class Util {
     }
 
     /**
-     * Reads an object from the stream
+     * <p>Reads an object from the stream, notice that this is the inverse of the 
+     * {@link #writeObject(java.lang.Object, java.io.DataOutputStream)}.</p>
+     *
+     * <p>
+     * The sample below demonstrates the usage and registration of the {@link com.codename1.io.Externalizable} interface:
+     * </p>
+     * <script src="https://gist.github.com/codenameone/858d8634e3cf1a82a1eb.js"></script>
      *
      * @param input the source input stream
      * @throws IOException thrown by the stream
@@ -533,7 +563,8 @@ public class Util {
 
             if ("ObjectArray".equals(type)) {
                 Object[] v = new Object[input.readInt()];
-                for (int iter = 0; iter < v.length; iter++) {
+                int vlen = v.length;
+                for (int iter = 0; iter < vlen; iter++) {
                     v[iter] = readObject(input);
                 }
                 return v;
@@ -545,35 +576,40 @@ public class Util {
             }
             if ("LongArray".equals(type)) {
                 long[] v = new long[input.readInt()];
-                for (int iter = 0; iter < v.length; iter++) {
+                int vlen = v.length;
+                for (int iter = 0; iter < vlen; iter++) {
                     v[iter] = input.readLong();
                 }
                 return v;
             }
             if ("ShortArray".equals(type)) {
                 short[] v = new short[input.readInt()];
-                for (int iter = 0; iter < v.length; iter++) {
+                int vlen = v.length;
+                for (int iter = 0; iter < vlen; iter++) {
                     v[iter] = input.readShort();
                 }
                 return v;
             }
             if ("DoubleArray".equals(type)) {
                 double[] v = new double[input.readInt()];
-                for (int iter = 0; iter < v.length; iter++) {
+                int vlen = v.length;
+                for (int iter = 0; iter < vlen; iter++) {
                     v[iter] = input.readDouble();
                 }
                 return v;
             }
             if ("FloatArray".equals(type)) {
                 float[] v = new float[input.readInt()];
-                for (int iter = 0; iter < v.length; iter++) {
+                int vlen = v.length;
+                for (int iter = 0; iter < vlen; iter++) {
                     v[iter] = input.readFloat();
                 }
                 return v;
             }
             if ("IntArray".equals(type)) {
                 int[] v = new int[input.readInt()];
-                for (int iter = 0; iter < v.length; iter++) {
+                int vlen = v.length;
+                for (int iter = 0; iter < vlen; iter++) {
                     v[iter] = input.readInt();
                 }
                 return v;
@@ -756,7 +792,8 @@ public class Util {
    
     private static String encode(char[] buf, String spaceChar) {
         final StringBuilder sbuf = new StringBuilder(buf.length * 3);
-        for (int i = 0; i < buf.length; i++) {
+        int blen = buf.length;
+        for (int i = 0; i < blen; i++) {
             final char ch = buf[i];
             if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') ||
                     (ch == '-' || ch == '_' || ch == '.' || ch == '~' || ch == '!'
@@ -825,7 +862,8 @@ public class Util {
      */
     public static String encodeBody(final byte[] buf) {
         char[] b = new char[buf.length];
-        for(int iter = 0 ; iter < buf.length ; iter++) {
+        int blen = buf.length;
+        for(int iter = 0 ; iter < blen ; iter++) {
             b[iter] = (char)buf[iter];
         }
         return encode(b, "+");
@@ -1021,7 +1059,7 @@ public class Util {
     public static int readAll(InputStream i, byte b[]) throws IOException {
         int len = b.length;
         int n = 0;
-    	while (n < len) {
+        while (n < len) {
             int count = i.read(b, n, len - n);
             if (count < 0) {
                 return n;
@@ -1079,6 +1117,68 @@ public class Util {
     }
     
     /**
+     * Removes the object at the source array offset and copies all other objects to the destination array
+     * @param sourceArray the source array
+     * @param destinationArray the resulting array which should be of the length sourceArray.length - 1
+     * @param o the object to remove from the array
+     */
+    public static void removeObjectAtOffset(Object[] sourceArray, Object[] destinationArray, Object o) {
+        int off = indexOf(sourceArray, o);
+        removeObjectAtOffset(sourceArray, destinationArray, off);
+    }
+    
+    /**
+     * Removes the object at the source array offset and copies all other objects to the destination array
+     * @param sourceArray the source array
+     * @param destinationArray the resulting array which should be of the length sourceArray.length - 1
+     * @param offset the offset of the array
+     */
+    public static void removeObjectAtOffset(Object[] sourceArray, Object[] destinationArray, int offset) {
+        System.arraycopy(sourceArray, 0, destinationArray, 0, offset);
+        System.arraycopy(sourceArray, offset + 1, destinationArray, offset, sourceArray.length - offset - 1);
+    }
+    
+    /**
+     * Inserts the object at the destination array offset 
+     * @param sourceArray the source array
+     * @param destinationArray the resulting array which should be of the length sourceArray.length + 1
+     * @param offset the offset of the array
+     * @param o the object
+     */
+    public static void insertObjectAtOffset(Object[] sourceArray, Object[] destinationArray, int offset, Object o) {
+        if(offset == 0) {
+            destinationArray[0] = o;
+            System.arraycopy(sourceArray, 0, destinationArray, 1, sourceArray.length);
+        } else {
+            if(offset == sourceArray.length) {
+                System.arraycopy(sourceArray, 0, destinationArray, 0, sourceArray.length);
+                destinationArray[sourceArray.length] = o;
+            } else {
+                System.arraycopy(sourceArray, 0, destinationArray, 0, offset);
+                destinationArray[offset] = o;
+                System.arraycopy(sourceArray, offset, destinationArray, offset + 1, sourceArray.length - offset);
+            }
+        }
+    }
+
+    /**
+     * Finds the object at the given offset while using the == operator and not the equals method call, it doesn't
+     * rely on the ordering of the elements like the Arrays method.
+     * @param arr the array
+     * @param value the value to search
+     * @return the offset or -1
+     */
+    public static int indexOf(Object[] arr, Object value) {
+        int l = arr.length;
+        for(int iter = 0 ; iter < l ; iter++) {
+            if(arr[iter] == value) {
+                return iter;
+            }
+        }
+        return -1;
+    }
+    
+    /**
      * Blocking method that will download the given URL to storage and return when the 
      * operation completes
      * @param url the URL
@@ -1103,7 +1203,12 @@ public class Util {
     }
 
     /**
-     * Non-blocking method that will download the given URL to storage in the background and return immediately
+     * <p>Non-blocking method that will download the given URL to storage in the background and return 
+     * immediately. This method can be used to fetch data dynamically and asynchronously e.g. in this code it is used
+     * to fetch book covers for the {@link com.codename1.components.ImageViewer}:</p>
+     * 
+     * <script src="https://gist.github.com/codenameone/305c3f5426b0e2e80833.js"></script>
+     * <img src="https://www.codenameone.com/img/developer-guide/components-imageviewer-dynamic.png" alt="Image viewer with dynamic URL fetching model" />
      * @param url the URL
      * @param fileName the storage file name
      */
@@ -1129,7 +1234,7 @@ public class Util {
     public static void downloadUrlToStorageInBackground(String url, String fileName, ActionListener onCompletion) {
         downloadUrlTo(url, fileName, false, true, true, onCompletion);
     }
-
+    
     /**
      * Non-blocking method that will download the given URL to file system storage in the background and return immediately
      * @param url the URL
@@ -1139,11 +1244,75 @@ public class Util {
     public static void downloadUrlToFileSystemInBackground(String url, String fileName, ActionListener onCompletion) {
         downloadUrlTo(url, fileName, false, true, false, onCompletion);
     }
-
+    
+    /**
+     * Downloads an image to the file system asynchronously.  If the image is already downloaded it will just load it directly from 
+     * the file system.
+     * @param url The URL to download the image from.
+     * @param fileName The the path to the file where the image should be downloaded.  If this file already exists, it will simply load this file and skip the 
+     * network request altogether.
+     * @param onSuccess Callback called on success.
+     * @param onFail Callback called if we fail to load the image.
+     * @since 3.4
+     * @see ConnectionRequest#downloadImageToFileSystem(java.lang.String, com.codename1.util.SuccessCallback, com.codename1.util.FailureCallback) 
+     */
+    public static void downloadImageToFileSystem(String url, String fileName, SuccessCallback<Image> onSuccess, FailureCallback<Image> onFail) {
+        implInstance.downloadImageToFileSystem(url, fileName, onSuccess, onFail);
+    }
+    
+    /**
+     * Downloads an image to the file system asynchronously.  If the image is already downloaded it will just load it directly from 
+     * the file system.
+     * @param url The URL to download the image from.
+     * @param fileName The the path to the file where the image should be downloaded.  If this file already exists, it will simply load this file and skip the 
+     * network request altogether.
+     * @param onSuccess Callback called on success.
+     * @since 3.4
+     * @see ConnectionRequest#downloadImageToFileSystem(java.lang.String, com.codename1.util.SuccessCallback) 
+     */
+    public static void downloadImageToFileSystem(String url, String fileName, SuccessCallback<Image> onSuccess) {
+        downloadImageToFileSystem(url, fileName, onSuccess, new CallbackAdapter<Image>());
+    }
+    
+    /**
+     * Downloads an image to storage asynchronously.  If the image is already downloaded it will just load it directly from 
+     * storage.
+     * @param url The URL to download the image from.
+     * @param fileName The the storage file to save the image to.  If this file already exists, it will simply load this file and skip the 
+     * network request altogether.
+     * @param onSuccess Callback called on success.
+     * @param onFail Callback called if we fail to load the image.
+     * @since 3.4
+     * @see ConnectionRequest#downloadImageToStorage(java.lang.String, com.codename1.util.SuccessCallback, com.codename1.util.FailureCallback) 
+     */
+    public static void downloadImageToStorage(String url, String fileName, SuccessCallback<Image> onSuccess, FailureCallback<Image> onFail) {
+        implInstance.downloadImageToStorage(url, fileName, onSuccess, onFail);
+    }
+    
+    public static void downloadImageToCache(String url, SuccessCallback<Image> onSuccess, FailureCallback<Image> onFail) {
+        implInstance.downloadImageToCache(url, onSuccess, onFail);
+        
+    }
+    
+    /**
+     * Downloads an image to storage asynchronously.  If the image is already downloaded it will just load it directly from 
+     * storage.
+     * @param url The URL to download the image from.
+     * @param fileName The the storage file to save the image to.  If this file already exists, it will simply load this file and skip the 
+     * network request altogether.
+     * @param onSuccess Callback called on success.
+     * @since 3.4
+     * @see ConnectionRequest#downloadImageToStorage(java.lang.String, com.codename1.util.SuccessCallback) 
+     */
+    public static void downloadImageToStorage(String url, String fileName, SuccessCallback<Image> onSuccess) {
+        downloadImageToStorage(url, fileName, onSuccess, new CallbackAdapter<Image>());
+    }
+    
     private static boolean downloadUrlTo(String url, String fileName, boolean showProgress, boolean background, boolean storage, ActionListener callback) {
         ConnectionRequest cr = new ConnectionRequest();
         cr.setPost(false);
         cr.setFailSilently(true);
+        cr.setDuplicateSupported(true);
         cr.setUrl(url);
         if(callback != null) {
             cr.addResponseListener(callback);
@@ -1166,5 +1335,184 @@ public class Util {
             NetworkManager.getInstance().addToQueueAndWait(cr);
         }
         return cr.getResponseCode() == 200;
+    }
+    
+    /**
+     * Shorthand method for Thread sleep that doesn't throw the stupid interrupted checked exception
+     * @param t the time
+     */
+    public static void sleep(int t) {
+        try {
+            Thread.sleep(t);
+        } catch(InterruptedException e) {
+        }
+    }
+    
+    
+    /**
+     * Shorthand method wait method that doesn't throw the stupid interrupted checked exception, it also
+     * includes the synchronized block to further reduce code clutter
+     * @param o the object to wait on
+     * @param t the time
+     */
+    public static void wait(Object o, int t) {
+        synchronized(o) {
+            try {
+                o.wait(t);
+            } catch(InterruptedException e) {
+            }
+        }
+    }    
+    
+    /**
+     * Returns the number object as an int
+     * @param number this can be a String or any number type
+     * @return an int value or an exception
+     */
+    public static int toIntValue(Object number) {
+        // we should convert this to use Number
+        if(number instanceof Integer) {
+            return ((Integer)number).intValue();
+        }
+        if(number instanceof String) {
+            return Integer.parseInt((String)number);
+        }
+        if(number instanceof Double) {
+            return ((Double)number).intValue();
+        }
+        if(number instanceof Float) {
+            return ((Float)number).intValue();
+        }
+        if(number instanceof Long) {
+            return ((Long)number).intValue();
+        }
+        /*if(number instanceof Short) {
+            return ((Short)number).intValue();
+        }
+        if(number instanceof Byte) {
+            return ((Byte)number).intValue();
+        }*/
+        if(number instanceof Boolean) {
+            Boolean b = (Boolean)number;
+            if(b.booleanValue()) {
+                return 1;
+            }
+            return 0;
+        }
+        throw new IllegalArgumentException("Not a number: " + number);
+    }
+
+    /**
+     * Returns the number object as a long
+     * @param number this can be a String or any number type
+     * @return a long value or an exception
+     */
+    public static long toLongValue(Object number) {
+        // we should convert this to use Number
+        if(number instanceof Long) {
+            return ((Long)number).longValue();
+        }
+        if(number instanceof Integer) {
+            return ((Integer)number).longValue();
+        }
+        if(number instanceof String) {
+            return Long.parseLong((String)number);
+        }
+        if(number instanceof Double) {
+            return ((Double)number).longValue();
+        }
+        if(number instanceof Float) {
+            return ((Float)number).longValue();
+        }
+        /*if(number instanceof Short) {
+            return ((Short)number).longValue();
+        }
+        if(number instanceof Byte) {
+            return ((Byte)number).longValue();
+        }*/
+        if(number instanceof Boolean) {
+            Boolean b = (Boolean)number;
+            if(b.booleanValue()) {
+                return 1;
+            }
+            return 0;
+        }
+        throw new IllegalArgumentException("Not a number: " + number);
+    }
+
+    /**
+     * Returns the number object as a float
+     * @param number this can be a String or any number type
+     * @return a float value or an exception
+     */
+    public static float toFloatValue(Object number) {
+        // we should convert this to use Number
+        if(number instanceof Float) {
+            return ((Float)number).floatValue();
+        }
+        if(number instanceof Long) {
+            return ((Long)number).floatValue();
+        }
+        if(number instanceof Integer) {
+            return ((Integer)number).floatValue();
+        }
+        if(number instanceof String) {
+            return Float.parseFloat((String)number);
+        }
+        if(number instanceof Double) {
+            return ((Double)number).floatValue();
+        }
+        /*if(number instanceof Short) {
+            return ((Short)number).floatValue();
+        }
+        if(number instanceof Byte) {
+            return ((Byte)number).floatValue();
+        }*/
+        if(number instanceof Boolean) {
+            Boolean b = (Boolean)number;
+            if(b.booleanValue()) {
+                return 1;
+            }
+            return 0;
+        }
+        throw new IllegalArgumentException("Not a number: " + number);
+    }
+
+    /**
+     * Returns the number object as a double
+     * @param number this can be a String or any number type
+     * @return a double value or an exception
+     */
+    public static double toDoubleValue(Object number) {
+        // we should convert this to use Number
+        if(number instanceof Double) {
+            return ((Double)number).doubleValue();
+        }
+        if(number instanceof Float) {
+            return ((Float)number).doubleValue();
+        }
+        if(number instanceof Long) {
+            return ((Long)number).doubleValue();
+        }
+        if(number instanceof Integer) {
+            return ((Integer)number).doubleValue();
+        }
+        if(number instanceof String) {
+            return Double.parseDouble((String)number);
+        }
+        /*if(number instanceof Short) {
+            return ((Short)number).doubleValue();
+        }
+        if(number instanceof Byte) {
+            return ((Byte)number).doubleValue();
+        }*/
+        if(number instanceof Boolean) {
+            Boolean b = (Boolean)number;
+            if(b.booleanValue()) {
+                return 1;
+            }
+            return 0;
+        }
+        throw new IllegalArgumentException("Not a number: " + number);
     }
 }

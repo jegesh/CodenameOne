@@ -35,10 +35,12 @@ import java.io.IOException;
  * You can ask it to list your posts and then seek the correct id within the returned JSON
  * 
  * @author Chen Fishbein
+ * @deprecated This functionality is no longer possible open a BrowserComponent 
+ * with the link instead, this class will be removed in next version
  */
 public class LikeButton extends Button implements ActionListener {
     private String appId = "132970916828080";
-    private String redirectURI = "http://www.codenameone.com/";
+    private String redirectURI = "https://www.codenameone.com/";
     private String clientSecret = "6aaf4c8ea791f08ea15735eb647becfe";
     private String[] permissions;
     private String postId = "290052831046005_244933438934534";
@@ -62,7 +64,7 @@ public class LikeButton extends Button implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void actionPerformed(ActionEvent evt) {
         if(!FaceBookAccess.getInstance().isAuthenticated()) {
@@ -101,28 +103,28 @@ public class LikeButton extends Button implements ActionListener {
     
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyNames() {
         return new String[]{"appId", "redirectURI", "clientSecret", "postId", "permissions"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Class[] getPropertyTypes() {
         return new Class[]{String.class, String.class, String.class, String.class, new String[0].getClass()};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyTypeNames() {
         return new String[] {"String", "String", "String", "String", "String[]"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Object getPropertyValue(String name) {
         if (name.equals("appId")) {
@@ -144,7 +146,7 @@ public class LikeButton extends Button implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String setPropertyValue(String name, Object value) {
         if (name.equals("appId")) {

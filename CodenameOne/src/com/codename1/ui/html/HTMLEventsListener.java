@@ -69,7 +69,7 @@ class HTMLEventsListener implements ActionListener,FocusListener {
                         }
                     }
                 };
-                tf.addDataChangeListener(dcl);
+                tf.addDataChangedListener(dcl);
                 listeners.put(cmp, dcl);
             }
         }
@@ -107,7 +107,7 @@ class HTMLEventsListener implements ActionListener,FocusListener {
     }
 
     /**
-     * {@inheritDoc}
+     * {{@inheritDoc}}
      */
     public void actionPerformed(ActionEvent evt) {
         Object src = evt.getSource();
@@ -173,7 +173,7 @@ class HTMLEventsListener implements ActionListener,FocusListener {
     }
 
     /**
-     * {@inheritDoc}
+     * {{@inheritDoc}}
      */
     public void focusGained(Component cmp) {
         if (htmlC.getHTMLCallback()!=null) {
@@ -182,7 +182,7 @@ class HTMLEventsListener implements ActionListener,FocusListener {
     }
 
     /**
-     * {@inheritDoc}
+     * {{@inheritDoc}}
      */
     public void focusLost(Component cmp) {
         if (htmlC.getHTMLCallback()!=null) {

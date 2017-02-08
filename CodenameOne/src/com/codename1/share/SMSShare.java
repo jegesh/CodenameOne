@@ -45,11 +45,22 @@ public class SMSShare extends ShareService {
      * Default Constructor
      */
     public SMSShare() {
-        super("SMS", Resources.getSystemResource().getImage("sms.png"));
+        super("SMS", null);
+    }
+
+    @Override
+    public Image getIcon() {
+        Image i = super.getIcon();
+        if(i == null) {
+            i = Resources.getSystemResource().getImage("sms.png");
+            setIcon(i);
+        }
+        return i;
     }
     
+    
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void share(final String toShare) {
         final Form currentForm = Display.getInstance().getCurrent();
@@ -134,7 +145,7 @@ public class SMSShare extends ShareService {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean canShareImage() {
         return false;

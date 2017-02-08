@@ -37,6 +37,8 @@ import com.codename1.ui.TextArea;
 import com.codename1.ui.list.ListCellRenderer;
 import com.codename1.ui.list.ListModel;
 import com.codename1.ui.Font;
+import com.codename1.ui.FontImage;
+import com.codename1.ui.Form;
 import com.codename1.ui.animations.Animation;
 import com.codename1.ui.events.FocusListener;
 import com.codename1.ui.geom.Rectangle;
@@ -48,6 +50,8 @@ import com.codename1.ui.util.Resources;
  * Used to render the default look of Codename One
  *
  * @author Chen Fishbein
+ * @deprecated this class is still crucial for some features in Codename One. The deprecation is here to indicate 
+ * our desire to reduce usage/reliance on this class. 
  */
 public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     private Image[] chkBoxImages = null;
@@ -71,7 +75,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void bind(Component cmp) {
         if (tickWhenFocused && cmp instanceof Label) {
@@ -263,14 +267,15 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
+     * @deprecated this method is no longer used by the implementation, we shifted code away to improve performance
      */
     public void drawButton(Graphics g, Button b) {
         drawComponent(g, b, b.getIconFromState(), null, 0);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawCheckBox(Graphics g, Button cb) {
         if (chkBoxImages != null) {
@@ -307,12 +312,12 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             int rectWidth = scaleCoordinate(12f, 16, width);
             int tX = cb.getX();
             if (cb.isRTL()) {
-            	tX = tX + cb.getWidth() - style.getPadding(cb.isRTL(), Component.LEFT) - rectWidth;
+            	tX = tX + cb.getWidth() - style.getPaddingLeft(cb.isRTL()) - rectWidth;
             } else {
-            	tX += style.getPadding(cb.isRTL(), Component.LEFT);
+            	tX += style.getPaddingLeft(cb.isRTL());
             }
 
-            int tY = cb.getY() + style.getPadding(false, Component.TOP) + (cb.getHeight() - style.getPadding(false, Component.TOP) - style.getPadding(false, Component.BOTTOM)) / 2 - height / 2;
+            int tY = cb.getY() + style.getPaddingTop() + (cb.getHeight() - style.getPaddingTop() - style.getPaddingBottom()) / 2 - height / 2;
             g.translate(tX, tY);
             int x = scaleCoordinate(1.04f, 16, width);
             int y = scaleCoordinate(4.0f, 16, height);
@@ -374,14 +379,15 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
+     * @deprecated this method is no longer used by the implementation, we shifted code away to improve performance
      */
     public void drawLabel(Graphics g, Label l) {
         drawComponent(g, l, l.getMaskedIcon(), null, 0);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawRadioButton(Graphics g, Button rb) {
         if (rButtonImages != null) {
@@ -411,9 +417,9 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             g.setColor(style.getFgColor());
             int x = rb.getX();
             if (rb.isRTL()) {
-            	x = x + rb.getWidth() - style.getPadding(rb.isRTL(), Component.LEFT) - height;
+            	x = x + rb.getWidth() - style.getPaddingLeft(rb.isRTL()) - height;
             } else {
-            	x += style.getPadding(rb.isRTL(), Component.LEFT);
+            	x += style.getPaddingLeft(rb.isRTL());
             }
 
             int y = rb.getY();
@@ -431,13 +437,13 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawComboBox(Graphics g, List cb) {
         int border = 2;
         Style style = cb.getStyle();
-        int leftPadding = style.getPadding(cb.isRTL(), Component.LEFT);
-        int rightPadding = style.getPadding(cb.isRTL(), Component.RIGHT);
+        int leftPadding = style.getPaddingLeft(cb.isRTL());
+        int rightPadding = style.getPaddingRight(cb.isRTL());
 
         setFG(g, cb);
 
@@ -451,7 +457,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             comboImageWidth = style.getFont().getHeight();
         }
         
-        int cellX = cb.getX() + style.getPadding(false, Component.TOP);
+        int cellX = cb.getX() + style.getPaddingTop();
         if(cb.isRTL()){
             cellX += comboImageWidth;
         }
@@ -459,9 +465,9 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         if (model.getSize() > 0) {
             Component cmp = renderer.getListCellRendererComponent(cb, value, model.getSelectedIndex(), cb.hasFocus());
             cmp.setX(cellX);
-            cmp.setY(cb.getY() + style.getPadding(false, Component.TOP));
+            cmp.setY(cb.getY() + style.getPaddingTop());
             cmp.setWidth(cb.getWidth() - comboImageWidth - rightPadding - leftPadding);
-            cmp.setHeight(cb.getHeight() - style.getPadding(false, Component.TOP) - style.getPadding(false, Component.BOTTOM));
+            cmp.setHeight(cb.getHeight() - style.getPaddingTop() - style.getPaddingBottom());
             cmp.paint(g);
         }
 
@@ -540,13 +546,13 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawList(Graphics g, List l) {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawTextArea(Graphics g, TextArea ta) {
         setFG(g, ta);
@@ -560,9 +566,9 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
 
         int align = reverseAlignForBidi(ta);
 
-        int leftPadding = ta.getStyle().getPadding(ta.isRTL(), Component.LEFT);
-        int rightPadding = ta.getStyle().getPadding(ta.isRTL(), Component.RIGHT);
-        int topPadding = ta.getStyle().getPadding(false, Component.TOP);
+        int leftPadding = ta.getStyle().getPaddingLeft(ta.isRTL());
+        int rightPadding = ta.getStyle().getPaddingRight(ta.isRTL());
+        int topPadding = ta.getStyle().getPaddingTop();
         boolean shouldBreak = false;
         
         for (int i = 0; i < line; i++) {
@@ -575,7 +581,8 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                 //display ******** if it is a password field
                 String displayText = "";
                 if ((ta.getConstraint() & TextArea.PASSWORD) != 0) {
-                    for (int j = 0; j < rowText.length(); j++) {
+                    int rlen = rowText.length();
+                    for (int j = 0; j < rlen; j++) {
                         displayText += passwordChar;
                     }
                 } else {
@@ -613,7 +620,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
 
     private static final Image[] threeImageCache = new Image[3];
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getButtonPreferredSize(Button b) {
         threeImageCache[0] = b.getMaskedIcon();
@@ -623,7 +630,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getCheckBoxPreferredSize(Button cb) {
         if(cb.isToggle()) {
@@ -651,7 +658,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     private static final Image[] oneImageCache = new Image[1];
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getLabelPreferredSize(Label l) {
         oneImageCache[0] = l.getMaskedIcon();
@@ -659,7 +666,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     private Dimension getPreferredSize(Label l, Image[] icons, Image stateImage) {
         int prefW = 0;
@@ -667,7 +674,8 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
 
         Style style = l.getStyle();
         int gap = l.getGap();
-        for (int i = 0; i < icons.length; i++) {
+        int ilen = icons.length;
+        for (int i = 0; i < ilen; i++) {
             Image icon = icons[i];
             if (icon != null) {
                 prefW = Math.max(prefW, icon.getWidth());
@@ -716,14 +724,14 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         }
 
         if(l.isShowEvenIfBlank()) {
-            prefH += (style.getPadding(false, Component.TOP) + style.getPadding(false, Component.BOTTOM));
-            prefW += (style.getPadding(l.isRTL(), Component.RIGHT) + style.getPadding(l.isRTL(), Component.LEFT));
+            prefH += style.getVerticalPadding();
+            prefW += style.getHorizontalPadding();
         } else {
             if (prefH != 0) {
-                prefH += (style.getPadding(false, Component.TOP) + style.getPadding(false, Component.BOTTOM));
+                prefH += style.getVerticalPadding();
             }
             if (prefW != 0) {
-                prefW += (style.getPadding(l.isRTL(), Component.RIGHT) + style.getPadding(l.isRTL(), Component.LEFT));
+                prefW += style.getHorizontalPadding();
             }
         }
 
@@ -740,7 +748,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getListPreferredSize(List l) {
         Dimension d = getListPreferredSizeImpl(l);
@@ -814,15 +822,15 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             }
         }
         if(unselectedEntryStyle != null) {
-            selectedWidth += selectedEntryStyle.getMargin(false, Component.LEFT) + selectedEntryStyle.getMargin(false, Component.RIGHT);
-            selectedHeight += selectedEntryStyle.getMargin(false, Component.TOP) + selectedEntryStyle.getMargin(false, Component.BOTTOM);
-            width += unselectedEntryStyle.getMargin(false, Component.LEFT) + unselectedEntryStyle.getMargin(false, Component.RIGHT);
-            height += unselectedEntryStyle.getMargin(false, Component.TOP) + unselectedEntryStyle.getMargin(false, Component.BOTTOM);
+            selectedWidth += selectedEntryStyle.getMarginLeftNoRTL() + selectedEntryStyle.getMarginRightNoRTL();
+            selectedHeight += selectedEntryStyle.getMarginTop() + selectedEntryStyle.getMarginBottom();
+            width += unselectedEntryStyle.getMarginLeftNoRTL() + unselectedEntryStyle.getMarginRightNoRTL();
+            height += unselectedEntryStyle.getMarginTop() + unselectedEntryStyle.getMarginBottom();
         }
 
         Style lStyle = l.getStyle();
-        int verticalPadding = lStyle.getPadding(false, Component.TOP) + lStyle.getPadding(false, Component.BOTTOM);
-        int horizontalPadding = lStyle.getPadding(false, Component.RIGHT) + lStyle.getPadding(false, Component.LEFT);
+        int verticalPadding = lStyle.getPaddingTop() + lStyle.getPaddingBottom();
+        int horizontalPadding = lStyle.getPaddingRightNoRTL() + lStyle.getPaddingLeftNoRTL() + l.getSideGap();
 
         if (numOfcomponents == 0) {
             return new Dimension(horizontalPadding, verticalPadding);
@@ -842,7 +850,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getRadioButtonPreferredSize(Button rb) {
         if(rb.isToggle()) {
@@ -863,12 +871,16 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         // allow for radio buttons without a string within them
         d.setHeight(Math.max(height, d.getHeight()));
 
-        d.setWidth(d.getWidth() + height + rb.getGap());
+        if(rButtonImages != null && rButtonImages.length > 0) {
+            d.setWidth(rButtonImages[0].getWidth() + d.getWidth() + rb.getGap());
+        } else {
+            d.setWidth(d.getWidth() + height + rb.getGap());
+        }
         return d;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getTextAreaSize(TextArea ta, boolean pref) {
         int prefW = 0;
@@ -889,18 +901,20 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             rows = ta.getLines();
         }
         prefH = (f.getHeight() + ta.getRowsGap()) * rows;
-        int columns = ta.getColumns();
-        String str = "";
-        for (int iter = 0; iter < columns; iter++) {
-            str += TextArea.getWidestChar();
-        }
-        if(columns > 0) {
-            prefW = Math.max(prefW, f.stringWidth(str));
+        if(!ta.isActAsLabel()) {
+            int columns = ta.getColumns();
+            String str = "";
+            for (int iter = 0; iter < columns; iter++) {
+                str += TextArea.getWidestChar();
+            }
+            if(columns > 0) {
+                prefW = Math.max(prefW, f.stringWidth(str));
+            }
         }
         prefH = Math.max(prefH, rows * f.getHeight());
 
-        prefW += style.getPadding(false, Component.RIGHT) + style.getPadding(false, Component.LEFT);
-        prefH += style.getPadding(false, Component.TOP) + style.getPadding(false, Component.BOTTOM);
+        prefW += style.getPaddingRightNoRTL() + style.getPaddingLeftNoRTL();
+        prefH += style.getPaddingTop() + style.getPaddingBottom();
         if(style.getBorder() != null) {
             prefW = Math.max(style.getBorder().getMinimumWidth(), prefW);
             prefH = Math.max(style.getBorder().getMinimumHeight(), prefH);
@@ -949,10 +963,10 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         int cmpWidth = l.getWidth();
 
         boolean rtl = l.isRTL();
-        int leftPadding = style.getPadding(rtl, Component.LEFT);
-        int rightPadding = style.getPadding(rtl, Component.RIGHT);
-        int topPadding = style.getPadding(false, Component.TOP);
-        int bottomPadding = style.getPadding(false, Component.BOTTOM);
+        int leftPadding = style.getPaddingLeft(rtl);
+        int rightPadding = style.getPaddingRight(rtl);
+        int topPadding = style.getPaddingTop();
+        int bottomPadding = style.getPaddingBottom();
         
         Font font = style.getFont();
         int fontHeight = 0;
@@ -963,21 +977,27 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             fontHeight = font.getHeight();
         }
         
+        int x = cmpX + leftPadding;
+        int y = cmpY + topPadding;
+        boolean opposite = false;
         if (stateIcon != null) {
             stateIconSize = stateIcon.getWidth(); //square image width == height
-            stateIconYPosition = cmpY + topPadding +
-                    (cmpHeight - topPadding -
-                    bottomPadding) / 2 - stateIconSize / 2;
+            preserveSpaceForState = stateIconSize + gap;
+            stateIconYPosition = cmpY + topPadding
+                    + (cmpHeight - topPadding
+                    - bottomPadding) / 2 - stateIconSize / 2;
             int tX = cmpX;
-            if(((Button)l).isOppositeSide()) {
-                    if (rtl) {
-                        tX += leftPadding;
-                    } else {
-                        tX = tX + cmpWidth - leftPadding - stateIconSize;
-                    }
-                    cmpWidth -= leftPadding - stateIconSize;
+            if (((Button) l).isOppositeSide()) {
+                if (rtl) {
+                    tX += leftPadding;
+                } else {
+                    tX = tX + cmpWidth - leftPadding - stateIconSize;
+                }
+                cmpWidth -= leftPadding - stateIconSize;
+                preserveSpaceForState = 0;
+                opposite = true;
             } else {
-                preserveSpaceForState = stateIconSize + gap;
+                x = cmpX + leftPadding + preserveSpaceForState;
                 if (rtl) {
                     tX = tX + cmpWidth - leftPadding - stateIconSize;
                 } else {
@@ -989,9 +1009,6 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         }
 
         //default for bottom left alignment
-        int x = cmpX + leftPadding + preserveSpaceForState;
-        int y = cmpY + topPadding;
-
         int align = reverseAlignForBidi(l, style.getAlignment());
 
         int textPos= reverseAlignForBidi(l, l.getTextPosition());
@@ -1016,8 +1033,12 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                             leftPadding +
                             rightPadding +
                             ((icon != null) ? icon.getWidth() + l.getGap() : 0) +
-                            font.stringWidth(text))) / 2;
-                    x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                            l.getStringWidth(font))) / 2;
+                    if(!opposite){
+                        x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                    }else{
+                        x = Math.min(x, cmpX + leftPadding + preserveSpaceForState);                    
+                    }
                     y = y + (cmpHeight - (topPadding +
                             bottomPadding +
                             Math.max(((icon != null) ? icon.getHeight() : 0),
@@ -1028,8 +1049,12 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     x = x + (cmpWidth - (preserveSpaceForState + leftPadding +
                             rightPadding +
                             Math.max(((icon != null) ? icon.getWidth() + l.getGap() : 0),
-                            font.stringWidth(text)))) / 2;
-                    x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                            l.getStringWidth(font)))) / 2;
+                    if(!opposite){
+                        x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                    }else{
+                        x = Math.min(x, cmpX + leftPadding + preserveSpaceForState);                    
+                    }
                     y = y + (cmpHeight - (topPadding +
                             bottomPadding +
                             ((icon != null) ? icon.getHeight() + gap : 0) +
@@ -1042,11 +1067,19 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                 case Label.RIGHT:
                     x = cmpX + cmpWidth - rightPadding -
                             ( ((icon != null) ? (icon.getWidth() + gap) : 0) +
-                            font.stringWidth(text));
+                            l.getStringWidth(font));
                     if(l.isRTL()) {
-                        x = Math.max(x - preserveSpaceForState, cmpX + leftPadding);
+                        if(!opposite){
+                            x = Math.max(x - preserveSpaceForState, cmpX + leftPadding);
+                        }else{
+                            x = Math.min(x - preserveSpaceForState, cmpX + leftPadding);                        
+                        }
                     } else {
-                        x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                        if(!opposite){
+                            x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                        }else{
+                            x = Math.min(x, cmpX + leftPadding + preserveSpaceForState);                        
+                        }
                     }
                     y = y + (cmpHeight - (topPadding +
                             bottomPadding +
@@ -1057,8 +1090,13 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                 case Label.TOP:
                     x = cmpX + cmpWidth - rightPadding -
                              (Math.max(((icon != null) ? (icon.getWidth()) : 0),
-                            font.stringWidth(text)));
-                    x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                            l.getStringWidth(font)));
+                    if(!opposite){
+                        x = Math.max(x, cmpX + leftPadding + preserveSpaceForState);
+                    }else{
+                        x = Math.min(x, cmpX + leftPadding + preserveSpaceForState);                    
+                    }
+                    
                     y = y + (cmpHeight - (topPadding +
                             bottomPadding +
                             ((icon != null) ? icon.getHeight() + gap : 0) + fontHeight)) / 2;
@@ -1082,7 +1120,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         if (icon == null) { // no icon only string 
             drawLabelString(g, l, text, x, y, textSpaceW);
         } else {
-            int strWidth = font.stringWidth(text);
+            int strWidth = l.getStringWidth(font);
             int iconWidth = icon.getWidth();
             int iconHeight = icon.getHeight();
             int iconStringWGap;
@@ -1173,11 +1211,12 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         g.clipRect(x, cy, textSpaceW, ch);
 
         if (l.isTickerRunning()) {
+            Font font = style.getFont();
             if (l.getShiftText() > 0) {
                 if (l.getShiftText() > textSpaceW) {
-                    l.setShiftText(x - l.getX() - style.getFont().stringWidth(text));
+                    l.setShiftText(x - l.getX() - l.getStringWidth(font));
                 }
-            } else if (l.getShiftText() + style.getFont().stringWidth(text) < 0) {
+            } else if (l.getShiftText() + l.getStringWidth(font) < 0) {
                 l.setShiftText(textSpaceW);
             }
         }
@@ -1205,7 +1244,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         Font f = style.getFont();
         boolean rtl = l.isRTL();
         boolean isTickerRunning = l.isTickerRunning();
-        int txtW = f.stringWidth(text);
+        int txtW = l.getStringWidth(f);
         if ((!isTickerRunning) || rtl) {
             //if there is no space to draw the text add ... at the end
             if (txtW > textSpaceW && textSpaceW > 0) {
@@ -1230,7 +1269,8 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                         int index = 1;
                         int widest = f.charWidth('W');
                         int pointsW = f.stringWidth(points);
-                        while (fastCharWidthCheck(text, index, textSpaceW - pointsW, widest, f) && index < text.length()){
+                        int tlen = text.length();
+                        while (fastCharWidthCheck(text, index, textSpaceW - pointsW, widest, f) && index < tlen){
                             index++;
                         }
                         text = text.substring(0, Math.min(text.length(), Math.max(1, index-1))) + points;
@@ -1253,7 +1293,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getComboBoxPreferredSize(List cb) {
         Dimension d = getListPreferredSize(cb);
@@ -1290,7 +1330,8 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             // show the last character in a password field
             if (ta.isPendingCommit()) {
                 if (text.length() > 0) {
-                    for (int j = 0; j < text.length() - 1; j++) {
+                    int tlen = text.length();
+                    for (int j = 0; j < tlen - 1; j++) {
                         displayText += passwordChar;
                     }
                     displayText += text.charAt(text.length() - 1);
@@ -1307,7 +1348,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawTextField(Graphics g, TextArea ta) {
         setFG(g, ta);
@@ -1318,7 +1359,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         Style style = ta.getStyle();
         int x = 0;
         int cursorCharPosition = ta.getCursorPosition();//ta.getCursorX();        
-        Font f = ta.getStyle().getFont();
+        Font f = style.getFont();
         int cursorX = 0;
         int xPos = 0;
         
@@ -1340,26 +1381,26 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     cursorCharPosition = Math.min(displayText.length(), 
                         cursorCharPosition);
                     xPos = f.stringWidth(displayText.substring(0, cursorCharPosition));
-                    cursorX = ta.getX() + style.getPadding(ta.isRTL(), Component.LEFT) + xPos;
+                    cursorX = ta.getX() + style.getPaddingLeft(ta.isRTL()) + xPos;
 
                     // no point in showing the input mode when there is only one input mode...
                     if (inputModeWidth > 0 && ta.getInputModeOrder() != null && ta.getInputModeOrder().length == 1) {
                         inputModeWidth = 0;
                     }
                     if (ta.isEnableInputScroll()) {
-                        if (ta.getWidth() > (f.getHeight() * 2) && cursorX >= ta.getWidth() - inputModeWidth - style.getPadding(ta.isRTL(), Component.LEFT)) {
-                            if (x + xPos >= ta.getWidth() - inputModeWidth - style.getPadding(ta.isRTL(), Component.LEFT) * 2) {
-                                x=ta.getWidth() - inputModeWidth - style.getPadding(ta.isRTL(), Component.LEFT) * 2 - xPos - 1;
+                        if (ta.getWidth() > (f.getHeight() * 2) && cursorX >= ta.getWidth() - inputModeWidth - style.getPaddingLeft(ta.isRTL())) {
+                            if (x + xPos >= ta.getWidth() - inputModeWidth - style.getPaddingLeft(ta.isRTL()) * 2) {
+                                x=ta.getWidth() - inputModeWidth - style.getPaddingLeft(ta.isRTL()) * 2 - xPos - 1;
                             }
                         }
                     }
                 }
-                displayX = ta.getX() + x + style.getPadding(ta.isRTL(), Component.LEFT);
+                displayX = ta.getX() + x + style.getPaddingLeft(ta.isRTL());
             } else {
                 x = 0;
                 cursorX = getTextFieldCursorX(ta);
-                int baseX = ta.getX() + style.getPadding(false, Component.LEFT) + inputModeWidth;
-                int endX = ta.getX() + ta.getWidth() - style.getPadding(false, Component.RIGHT);
+                int baseX = ta.getX() + style.getPaddingLeftNoRTL() + inputModeWidth;
+                int endX = ta.getX() + ta.getWidth() - style.getPaddingRightNoRTL();
 
                 if (cursorX < baseX) {
                     x = baseX - cursorX;
@@ -1369,27 +1410,27 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     }
                 }
 
-                displayX = ta.getX() + ta.getWidth() - style.getPadding(false, Component.RIGHT) - style.getPadding(false, Component.LEFT) - f.stringWidth(displayText) + x;
+                displayX = ta.getX() + ta.getWidth() - style.getPaddingRightNoRTL() - style.getPaddingLeftNoRTL() - f.stringWidth(displayText) + x;
             }
 
             int cx = g.getClipX();
             int cy = g.getClipY();
             int cw = g.getClipWidth();
             int ch = g.getClipHeight();
-            int clipx = ta.getX() + style.getPadding(ta.isRTL(), Component.LEFT);
-            int clipw = ta.getWidth() - style.getPadding(ta.isRTL(), Component.LEFT) - style.getPadding(ta.isRTL(), Component.RIGHT);
+            int clipx = ta.getX() + style.getPaddingLeft(ta.isRTL());
+            int clipw = ta.getWidth() - style.getPaddingLeft(ta.isRTL()) - style.getPaddingRight(ta.isRTL());
             //g.pushClip();
             g.clipRect(clipx, cy, clipw, ch);
 
             switch(ta.getVerticalAlignment()) {
                 case Component.BOTTOM:
-                    g.drawString(displayText, displayX, ta.getY() + ta.getHeight() - style.getPadding(false, Component.BOTTOM) - f.getHeight(), ta.getStyle().getTextDecoration());
+                    g.drawString(displayText, displayX, ta.getY() + ta.getHeight() - style.getPaddingBottom() - f.getHeight(), style.getTextDecoration());
                     break;
                 case Component.CENTER:
-                    g.drawString(displayText, displayX, ta.getY() + ta.getHeight() / 2  - f.getHeight() / 2, ta.getStyle().getTextDecoration());
+                    g.drawString(displayText, displayX, ta.getY() + ta.getHeight() / 2  - f.getHeight() / 2, style.getTextDecoration());
                     break;
                 default:
-                    g.drawString(displayText, displayX, ta.getY() + style.getPadding(false, Component.TOP), ta.getStyle().getTextDecoration());
+                    g.drawString(displayText, displayX, ta.getY() + style.getPaddingTop(), style.getTextDecoration());
                     break;
             }
             g.setClip(cx, cy, cw, ch);
@@ -1403,14 +1444,14 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             
             if (ta.handlesInput() && ta.getWidth() / 2 > inputModeWidth) {
             	
-                int drawXPos = ta.getX() + style.getPadding(ta.isRTL(), Component.LEFT);
-                if((!ta.isRTL() && ta.getStyle().getAlignment() == Component.LEFT) ||
-                    (ta.isRTL() && ta.getStyle().getAlignment() == Component.RIGHT)) {
-                    drawXPos = drawXPos + ta.getWidth() - inputModeWidth - style.getPadding(false, Component.RIGHT) - style.getPadding(false, Component.LEFT);
+                int drawXPos = ta.getX() + style.getPaddingLeft(ta.isRTL());
+                if((!ta.isRTL() && style.getAlignment() == Component.LEFT) ||
+                    (ta.isRTL() && style.getAlignment() == Component.RIGHT)) {
+                    drawXPos = drawXPos + ta.getWidth() - inputModeWidth - style.getPaddingRightNoRTL() - style.getPaddingLeftNoRTL();
                 } 
                 g.setColor(style.getFgColor());
                 int inputIndicatorY = ta.getY()+ ta.getScrollY() + ta.getHeight() -  
-                        style.getPadding(false, Component.BOTTOM) - 
+                        style.getPaddingBottom() - 
                         f.getHeight();
                 g.fillRect(drawXPos, inputIndicatorY, inputModeWidth,
                         f.getHeight(), (byte) 140);
@@ -1468,7 +1509,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     xPos = f.stringWidth(displayText.substring(0, cursorCharPosition));
                 } 
         	}
-        	int displayX = ta.getX() + ta.getWidth() - style.getPadding(ta.isRTL(), Component.LEFT) - f.stringWidth(displayText);
+        	int displayX = ta.getX() + ta.getWidth() - style.getPaddingLeft(ta.isRTL()) - f.stringWidth(displayText);
         	cursorX = displayX + xPos;
         	x=0;
         } else {
@@ -1477,11 +1518,11 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                         cursorCharPosition);
                 xPos = f.stringWidth(displayText.substring(0, cursorCharPosition));
             }
-            cursorX = ta.getX() + style.getPadding(ta.isRTL(), Component.LEFT) + xPos;
+            cursorX = ta.getX() + style.getPaddingLeft(ta.isRTL()) + xPos;
 
-            if (ta.isSingleLineTextArea() && ta.getWidth() > (f.getHeight() * 2) && cursorX >= ta.getWidth() - inputModeWidth  -style.getPadding(ta.isRTL(), Component.LEFT)) {
-                if (x + xPos >= ta.getWidth() - inputModeWidth - style.getPadding(false, Component.LEFT) - style.getPadding(false, Component.RIGHT)) {
-                    x = ta.getWidth() - inputModeWidth - style.getPadding(false, Component.LEFT) - style.getPadding(false, Component.RIGHT) - xPos -1;
+            if (ta.isSingleLineTextArea() && ta.getWidth() > (f.getHeight() * 2) && cursorX >= ta.getWidth() - inputModeWidth  -style.getPaddingLeft(ta.isRTL())) {
+                if (x + xPos >= ta.getWidth() - inputModeWidth - style.getPaddingLeftNoRTL() - style.getPaddingRightNoRTL()) {
+                    x = ta.getWidth() - inputModeWidth - style.getPaddingLeftNoRTL() - style.getPaddingRightNoRTL() - xPos -1;
                 }
             }
         }
@@ -1490,22 +1531,21 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getTextFieldPreferredSize(TextArea ta) {
         return getTextAreaSize(ta, true);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
      public void drawTextFieldCursor(Graphics g, TextArea ta) {
          Style style = ta.getStyle();
          Font f = style.getFont();
 
 
-    	int cursorY = ta.getY() + style.getPadding(false, Component.TOP) +
-                ta.getCursorY() * (ta.getRowsGap() + f.getHeight());
+        int cursorY;
         if(ta.isSingleLineTextArea()) {
             switch(ta.getVerticalAlignment()) {
                 case Component.BOTTOM:
@@ -1515,11 +1555,11 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     cursorY = ta.getY() + ta.getHeight() / 2 -  f.getHeight() / 2;
                     break;
                 default:
-                    cursorY = ta.getY() + style.getPadding(false, Component.TOP);
+                    cursorY = ta.getY() + style.getPaddingTop();
                     break;
             }
          } else {
-            cursorY = ta.getY() + style.getPadding(false, Component.TOP) + ta.getCursorY() * (ta.getRowsGap() + f.getHeight());
+            cursorY = ta.getY() + style.getPaddingTop() + ta.getCursorY() * (ta.getRowsGap() + f.getHeight());
          }
     	int cursorX = getTextFieldCursorX(ta);
 
@@ -1529,7 +1569,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             String inputMode = ta.getInputMode();
             int inputModeWidth = f.stringWidth(inputMode);
 
-    		int baseX=ta.getX()+style.getPadding(false, Component.LEFT)+inputModeWidth;
+    		int baseX=ta.getX()+style.getPaddingLeftNoRTL()+inputModeWidth;
     		if (cursorX<baseX) {
     			x=baseX-cursorX;
     		}
@@ -1545,11 +1585,17 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         g.setColor(oldColor);
     }
      
+     private FontImage getDefaultRefreshIcon() {
+            Style s = new Style(UIManager.getInstance().getComponentStyle("Label"));
+            s.setFont(Font.createSystemFont(Font.FACE_SYSTEM, Font.STYLE_BOLD, Font.SIZE_LARGE));
+            return FontImage.createMaterial(FontImage.MATERIAL_ARROW_UPWARD, s);
+     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void drawPullToRefresh(Graphics g, final Component cmp, boolean taskExecuted) {
+        final Form parentForm = cmp.getComponentForm();
         final int scrollY = cmp.getScrollY();
         Component cmpToDraw;
         if (taskExecuted) {
@@ -1563,7 +1609,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
         }
 
         if (pull.getComponentAt(0) != updating && cmpToDraw != pull.getComponentAt(0)) {
-            cmp.getComponentForm().registerAnimated(new Animation() {
+            parentForm.registerAnimated(new Animation() {
 
                 int counter = 0;
                 Image i;
@@ -1571,7 +1617,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                 {
                     i = UIManager.getInstance().getThemeImageConstant("pullToRefreshImage");
                     if(i == null) {
-                        i = Resources.getSystemResource().getImage("refresh-icon.png");
+                        i = getDefaultRefreshIcon();
                     }
                 }
  
@@ -1586,7 +1632,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     if (counter == 6) {
                         ((Label) releaseToRefresh).setIcon(i);
                         ((Label) pullDown).setIcon(i.rotate(180));                        
-                        cmp.getComponentForm().deregisterAnimated(this);
+                        parentForm.deregisterAnimated(this);
                     }
                     cmp.repaint(cmp.getAbsoluteX(), cmp.getAbsoluteY() - getPullToRefreshHeight(), cmp.getWidth(), 
                             getPullToRefreshHeight());
@@ -1616,7 +1662,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public int getPullToRefreshHeight() {
         if (pull == null) {
@@ -1630,7 +1676,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             
             Image i = UIManager.getInstance().getThemeImageConstant("pullToRefreshImage");
             if(i == null) {
-                i = Resources.getSystemResource().getImage("refresh-icon.png");
+                i = getDefaultRefreshIcon();
             }
             i = i.rotate(180);
             ((Label) pullDown).setIcon(i);
@@ -1640,7 +1686,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
             releaseToRefresh.setUIID("PullToRefresh");
             Image i = UIManager.getInstance().getThemeImageConstant("pullToRefreshImage");
             if(i == null) {
-                i = Resources.getSystemResource().getImage("refresh-icon.png");
+                i = getDefaultRefreshIcon();
             }
             ((Label) releaseToRefresh).setIcon(i);
         }
@@ -1662,7 +1708,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
      
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void focusGained(Component cmp) {
         if(cmp instanceof Label) {
@@ -1674,7 +1720,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void focusLost(Component cmp) {
         if(cmp instanceof Label) {
@@ -1686,7 +1732,7 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void refreshTheme(boolean b) {
         chkBoxImages = null;
@@ -1732,6 +1778,25 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                     setCheckBoxImages(checkSel, checkUnsel);
                 }
             }
+        } else {
+            if(!Font.isTrueTypeFileSupported()) {
+                return;
+            }
+            UIManager uim = UIManager.getInstance();
+            Style unsel = uim.createStyle("CheckBox", "", false);
+            Style sel = uim.createStyle("CheckBox", "sel#", true);
+            Style dis = uim.createStyle("CheckBox", "dis#", false);
+            FontImage checkedDis = FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX, dis);
+            FontImage uncheckedDis = FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX_OUTLINE_BLANK, sel);
+            if(focus) {
+                FontImage checkedSelected = FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX, sel);
+                FontImage uncheckedSelected = FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX_OUTLINE_BLANK, sel);
+                setCheckBoxFocusImages(checkedSelected, uncheckedSelected, checkedDis, uncheckedDis);
+            } else {
+                FontImage checkedUnselected = FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX, unsel);
+                FontImage uncheckedUnselected = FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX_OUTLINE_BLANK, unsel);
+                setCheckBoxImages(checkedUnselected, uncheckedUnselected, checkedDis, uncheckedDis);
+            }            
         }
     }
 
@@ -1753,6 +1818,25 @@ public class DefaultLookAndFeel extends LookAndFeel implements FocusListener {
                 } else {
                     setRadioButtonImages(radioSel, radioUnsel, disSel, disUnsel);
                 }
+            }
+        } else {
+            if(!Font.isTrueTypeFileSupported()) {
+                return;
+            }
+            UIManager uim = UIManager.getInstance();
+            Style unsel = uim.createStyle("RadioButton", "", false);
+            Style sel = uim.createStyle("RadioButton", "sel#", true);
+            Style dis = uim.createStyle("RadioButton", "dis#", false);
+            FontImage checkedDis = FontImage.createMaterial(FontImage.MATERIAL_RADIO_BUTTON_CHECKED, dis);
+            FontImage uncheckedDis = FontImage.createMaterial(FontImage.MATERIAL_RADIO_BUTTON_UNCHECKED, sel);
+            if(focus) {
+                FontImage checkedSelected = FontImage.createMaterial(FontImage.MATERIAL_RADIO_BUTTON_CHECKED, sel);
+                FontImage uncheckedSelected = FontImage.createMaterial(FontImage.MATERIAL_RADIO_BUTTON_UNCHECKED, sel);
+                setRadioButtonFocusImages(checkedSelected, uncheckedSelected, checkedDis, uncheckedDis);
+            } else {
+                FontImage checkedUnselected = FontImage.createMaterial(FontImage.MATERIAL_RADIO_BUTTON_CHECKED, unsel);
+                FontImage uncheckedUnselected = FontImage.createMaterial(FontImage.MATERIAL_RADIO_BUTTON_UNCHECKED, unsel);
+                setRadioButtonImages(checkedUnselected, uncheckedUnselected, checkedDis, uncheckedDis);
             }
         }
     }

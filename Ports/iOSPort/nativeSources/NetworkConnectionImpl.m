@@ -26,6 +26,9 @@
 #include "CodenameOne_GLViewController.h"
 #include "com_codename1_impl_ios_IOSImplementation.h"
 
+extern int isIOS8();
+extern NSString* fixFilePath(NSString* ns);
+
 int connections = 0;
 @implementation NetworkConnectionImpl
 
@@ -33,6 +36,7 @@ int connections = 0;
 {
     self = [super init];
     if (self) {
+        chunkedStreamingLen = -1;
         contentLength = -1;
         request = nil;
         allHeaderFields = nil;
@@ -60,7 +64,7 @@ int connections = 0;
 
 - (void)connect {
     dispatch_sync(dispatch_get_main_queue(), ^{
-        connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
+         connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
     });
 }
 
@@ -70,6 +74,13 @@ int connections = 0;
 
 - (void)setMethod:(NSString*)mtd {
     [request setHTTPMethod:mtd];
+}
+
+-(void)setChunkedStreamingLen:(int)len {
+    chunkedStreamingLen = len;
+    if (!isIOS8() && len > -1) {
+        NSLog(@"Attempt to set chunked streaming mode detected.  Chunked streaming mode is only supported in iOS 8 and higher");
+    }
 }
 
 - (int)getResponseCode {
@@ -96,6 +107,21 @@ int connections = 0;
     [request setHTTPBody:[NSData dataWithBytes:body length:size]];
 }
 
+-(void)setBody:(NSString*)file {
+#ifdef __IPHONE_8_0
+    if (isIOS8() && chunkedStreamingLen > -1) {
+        NSInputStream * input = [NSInputStream inputStreamWithFileAtPath:fixFilePath(file)];
+        [request setHTTPBodyStream: input];
+     } else {
+         NSData* d = [[NSFileManager defaultManager] contentsAtPath:fixFilePath(file)];
+         [request setHTTPBody: d];
+     }
+#else
+    NSData* d = [[NSFileManager defaultManager] contentsAtPath:fixFilePath(file)];
+    [request setHTTPBody: d];
+#endif
+}
+
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
     contentLength = [response expectedContentLength];
@@ -105,6 +131,15 @@ int connections = 0;
 #ifndef CN1_USE_ARC
     [allHeaderFields retain];
 #endif
+}
+
+- (NSURLRequest *)connection:(NSURLConnection *)connection
+             willSendRequest:(NSURLRequest *)_request
+            redirectResponse:(NSHTTPURLResponse *)response {
+    if (response.statusCode >= 300 && response.statusCode < 400) {
+        return nil;
+    }
+    return _request;
 }
 
 extern void connectionComplete(void* peer);

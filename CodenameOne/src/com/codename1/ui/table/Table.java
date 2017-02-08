@@ -39,8 +39,18 @@ import com.codename1.ui.plaf.Border;
 import com.codename1.ui.plaf.Style;
 
 /**
- * The table class represents a grid of data that can be used for rendering a grid
+ * <p>The {@code Table} class represents a grid of data that can be used for rendering a grid
  * of components/labels. The table reflects and updates the underlying model data.
+ * {@code Table} relies heavily on the {@link com.codename1.ui.table.TableLayout} class and 
+ * {@link com.codename1.ui.table.TableModel} interface to present its UI. Unlike a 
+ * {@link com.codename1.ui.List} a {@code Table} doesn't feature a separate renderer
+ * and instead allows developers to derive the class.
+ * </p>
+ * 
+ * <script src="https://gist.github.com/codenameone/6b106772ad1d58c50270.js"></script>
+ * 
+ * <img src="https://www.codenameone.com/img/developer-guide/components-table-pinstripe.png" alt="Table with customize cells using the pinstripe effect" />
+ * <img src="https://www.codenameone.com/img/developer-guide/components-table-pinstripe-edit.png" alt="Picker table cell during edit" />
  *
  * @author Shai Almog
  */
@@ -112,9 +122,9 @@ public class Table extends Container {
      * @param model the model underlying this table
      */
     public Table(TableModel model) {
+        setUIID("Table");
         this.model = model;
         updateModel();
-        setUIID("Table");
     }
 
     /**
@@ -146,6 +156,15 @@ public class Table extends Container {
         return -1;
     }
 
+    /**
+     * By default createCell/constraint won't be invoked for null values by overriding this method to return true
+     * you can replace this behavior
+     * @return false by default
+     */
+    protected boolean includeNullValues() {
+        return false;
+    }
+    
     /**
      * Returns the selected column in the table
      *
@@ -193,7 +212,7 @@ public class Table extends Container {
                 Object value = model.getValueAt(r, c);
 
                 // null should be returned for spanned over values
-                if(value != null) {
+                if(value != null || includeNullValues()) {
                     boolean e = model.isCellEditable(r, c);
                     Component cell = createCellImpl(value, r, c, e);
                     if(cell != null) {
@@ -216,7 +235,7 @@ public class Table extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void paintGlass(Graphics g) {
         if ((drawBorder) && (innerBorder!=INNER_BORDERS_NONE)) {
@@ -336,17 +355,17 @@ public class Table extends Container {
                             Component comp=t.getComponentAt(row, col);
                             if ((comp.isVisible()) &&
                                     ((drawEmptyCellsBorder) ||
-                                     ((comp.getWidth()-comp.getStyle().getPadding(false, Component.RIGHT) - comp.getStyle().getPadding(false, Component.LEFT)>0) &&
-                                      (comp.getHeight()-comp.getStyle().getPadding(false, Component.TOP) - comp.getStyle().getPadding(false, Component.BOTTOM)>0)))) {
-                                int rightMargin=comp.getStyle().getMargin(Component.RIGHT);
-                                int bottomMargin=comp.getStyle().getMargin(Component.BOTTOM);
+                                     ((comp.getWidth()-comp.getStyle().getPaddingRightNoRTL() - comp.getStyle().getPaddingLeftNoRTL()>0) &&
+                                      (comp.getHeight()-comp.getStyle().getPaddingTop() - comp.getStyle().getPaddingBottom()>0)))) {
+                                int rightMargin=comp.getStyle().getMarginRightNoRTL();
+                                int bottomMargin=comp.getStyle().getMarginBottom();
                                 if (col==0) {
                                     rightMargin*=2; // Since the first cell includes margins from both sides (left/right) so the next cell location is farther away - but we don't want to paint the border up to it
                                 }
                                 if (row==0) {
                                     bottomMargin*=2;
                                 }
-                                g.drawRect(x+comp.getStyle().getMargin(Component.LEFT), y+comp.getStyle().getMargin(Component.TOP), w-2-rightMargin, h-2-bottomMargin);
+                                g.drawRect(x+comp.getStyle().getMarginLeftNoRTL(), y+comp.getStyle().getMarginTop(), w-2-rightMargin, h-2-bottomMargin);
                             }
                         }
                     }
@@ -415,7 +434,7 @@ public class Table extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void initComponent() {
         // this can happen if deinitialize is invoked due to a menu command which modifies
@@ -428,7 +447,7 @@ public class Table extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void deinitialize() {
         // we unbind the listener to prevent a memory leak for the use case of keeping
@@ -608,7 +627,9 @@ public class Table extends Container {
      */
     public void setTitleAlignment(int titleAlignment) {
         this.titleAlignment = titleAlignment;
-        repaint();
+        for(int iter = 0 ; iter < model.getColumnCount() ; iter++) {
+            listener.dataChanged(-1, iter);
+        }
     }
 
 
@@ -698,14 +719,14 @@ public class Table extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyNames() {
         return new String[] {"data", "header"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Class[] getPropertyTypes() {
        return new Class[] {com.codename1.impl.CodenameOneImplementation.getStringArray2DClass(), 
@@ -713,18 +734,34 @@ public class Table extends Container {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyTypeNames() {
         return new String[] {"String[][]", "String[]"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Object getPropertyValue(String name) {
         if(name.equals("data")) {
-            return ((DefaultTableModel)model).data;
+            String[][] result = new String[((DefaultTableModel)model).data.size()][];
+            for(int iter = 0 ; iter < result.length ; iter++) {
+                Object[] o = ((DefaultTableModel)model).data.get(iter);
+                String[] arr = new String[o.length];
+                result[iter] = arr;
+                for(int ai = 0 ; ai < arr.length ; ai++) {
+                    Object current = o[ai];
+                    if(current instanceof String) {
+                        arr[ai] = (String)current;
+                    } else {
+                        if(current != null) {
+                            arr[iter] = current.toString();
+                        }
+                    }
+                }
+            }
+            return result;
         }
         if(name.equals("header")) {
             return ((DefaultTableModel)model).columnNames;
@@ -733,15 +770,15 @@ public class Table extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String setPropertyValue(String name, Object value) {
         if(name.equals("data")) {
-            setModel(new DefaultTableModel(((DefaultTableModel)model).columnNames, (String[][])value));
+            setModel(new DefaultTableModel(((DefaultTableModel)model).columnNames, (Object[][])value));
             return null;
         }
         if(name.equals("header")) {
-            setModel(new DefaultTableModel((String[])value, ((DefaultTableModel)model).data));
+            setModel(new DefaultTableModel((String[])value, ((DefaultTableModel)model).data, ((DefaultTableModel)model).editable));
             return null;
         }
         return super.setPropertyValue(name, value);
@@ -751,9 +788,15 @@ public class Table extends Container {
         private int editingColumn = -1;
         private int editingRow = -1;
         /**
-         * @inheritDoc
+         * {@inheritDoc}
          */
         public final void dataChanged(int row, int column) {
+            if(row == Integer.MIN_VALUE) {
+                // special case... Rebuild the table
+                updateModel();
+                revalidate();
+                return;
+            }
             // prevents the table from rebuilding on every text field edit which makes the table 
             // more usable on iOS devices with the VKB/Native editing
             if(editingColumn == column && editingRow == row) {
@@ -761,8 +804,15 @@ public class Table extends Container {
                 editingRow = -1;
                 return;
             }
-            Object value = model.getValueAt(row, column);
-            boolean e = model.isCellEditable(row, column);
+            Object value;
+            boolean e;
+            if(row < 0) {
+                e = false;
+                value = model.getColumnName(column);
+            } else {
+                value = model.getValueAt(row, column);
+                e = model.isCellEditable(row, column);
+            }
             Component cell = createCellImpl(value, row, column, e);
 
             TableLayout t = (TableLayout)getLayout();
@@ -772,11 +822,14 @@ public class Table extends Container {
             }
 
             Component c = t.getComponentAt(row, column);
-            removeComponent(c);
+            if(c != null) {
+                removeComponent(c);
+                
+                // a repaint sent right before this might result in an artifact for some use cases so
+                // removing visibility essentially cancels repaints
+                c.setVisible(false);
+            }
 
-            // a repaint sent right before this might result in an artifact for some use cases so
-            // removing visibility essentially cancels repaints
-            c.setVisible(false);
             addComponent(con, cell);
             layoutContainer();
             cell.requestFocus();

@@ -36,14 +36,31 @@ import java.util.Hashtable;
 import java.util.Vector;
 
 /**
- * Allows in place editing using a lightweight API without necessarily moving to
- * the external native text box. The main drawback in this approach is that editing
- * can't support features such as T9 and might not have the same keymapping or
- * behavior of the native text input.
- * <p>Notice that due to limitations of text area and text field input modes in
- * text area aren't properly supported since they won't work properly across devices.
- * To limit input modes please use the setInputModeOrder method. All constants 
- * declared in TextArea are ignored with the exception of PASSWORD.
+ * <p>
+ * A specialized version of {@link com.codename1.ui.TextArea} with some minor deviations from the original 
+ * specifically:
+ * </p>
+ * <ul>
+ *    <li>Blinking cursor is rendered on {@code TextField} only</li>
+ *    <li>{@link com.codename1.ui.events.DataChangeListener} is only available in {@code TextField}. 
+ *              This is crucial for character by character input event tracking</li>
+ *    <li>{@link com.codename1.ui.TextField#setDoneListener(com.codename1.ui.events.ActionListener) } is only available in {@code TextField}</li>
+ *    <li>Different UIID's ("{@code TextField}" vs. "{@code TextArea}") </li>
+ * </ul>
+ * 
+ * <p>
+ * The demo code below shows simple input using text fields:
+ * </p>
+ * 
+ * <script src="https://gist.github.com/codenameone/fb63dd5d6efdb95932be.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-text-component.png" alt="Text field input sample" />
+ * 
+ * <p>
+ * The following code demonstrates a more advanced search widget where the data is narrowed as we type
+ * directly into the title area search. Notice that the {@code TextField} and its hint are styled to look like the title.
+ * </p>
+ * <script src="https://gist.github.com/codenameone/dce6598a226aaf9a3157.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-toolbar-search.png" alt="Dynamic TextField search using the Toolbar" />
  * 
  * @author Shai Almog
  */
@@ -144,7 +161,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean isEnableInputScroll() {
         return enableInputScroll;
@@ -249,7 +266,34 @@ public class TextField extends TextArea {
         setUIID("TextField");
         setSingleLineTextArea(true);
     }
+
+    /**
+     * Construct text field with a hint
+     * 
+     * @param text the text of the field
+     * @param hint the hint string
+     */
+    public TextField(String text, String hint) {
+        this(text);
+        setHint(hint);
+    }
     
+
+    /**
+     * Construct text field with a hint, columns and constraint values
+     * 
+     * @param text the text of the field
+     * @param hint the hint string
+     * @param columns columns value
+     * @param constraint the constraint value
+     */
+    public TextField(String text, String hint, int columns, int constraint) {
+        this(text);
+        setHint(hint);
+        setColumns(columns);
+        setConstraint(constraint);
+    }
+
     /**
      * Performs a backspace operation
      */
@@ -306,7 +350,7 @@ public class TextField extends TextArea {
      * @return a text field if native in place editing is unsupported and a text area if it is
      */
     public static TextArea create(String text, int columns) {
-        if(Display.getInstance().getImplementation().isNativeInputSupported()) {
+        if(Display.impl.isNativeInputSupported()) {
             return new TextArea(text, 1, columns);
         }
         return new TextField(text, columns);
@@ -354,7 +398,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean isPendingCommit() {
         return pendingCommit;
@@ -387,6 +431,7 @@ public class TextField extends TextArea {
      * 
      * @param inputMode the display name of the input mode by default the following modes
      * are supported: Abc, ABC, abc, 123
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public void setInputMode(String inputMode) {
         this.inputMode = inputMode;
@@ -394,7 +439,8 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public String getInputMode() {
         return inputMode;
@@ -405,6 +451,7 @@ public class TextField extends TextArea {
      * 
      * @param keyCode the code
      * @return true for the hash (#) key code
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     protected boolean isChangeInputMode(int keyCode) {
         return keyCode == defaultChangeInputModeKey;
@@ -415,14 +462,15 @@ public class TextField extends TextArea {
             firstUppercaseInputMode.addElement("Abc");
             inputModes = new Hashtable();
             Hashtable upcase = new Hashtable();
-            for(int iter = 0 ; iter < DEFAULT_KEY_CODES.length ; iter++) {
+            int dlen = DEFAULT_KEY_CODES.length;
+            for(int iter = 0 ; iter < dlen ; iter++) {
                 upcase.put(new Integer('0' + iter), DEFAULT_KEY_CODES[iter]);
             }
             
             inputModes.put("ABC", upcase);
 
             Hashtable lowcase = new Hashtable();
-            for(int iter = 0 ; iter < DEFAULT_KEY_CODES.length ; iter++) {
+            for(int iter = 0 ; iter < dlen ; iter++) {
                 lowcase.put(new Integer('0' + iter), DEFAULT_KEY_CODES[iter].toLowerCase());
             }
             inputModes.put("abc", lowcase);
@@ -443,6 +491,7 @@ public class TextField extends TextArea {
      * is a String containing the characters to toggle between for the given keycode
      * @param firstUpcase indicates if this input mode in an input mode used for the special
      * case where the first letter is an upper case letter
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public static void addInputMode(String name, Hashtable values, boolean firstUpcase) {
         initInputModes();
@@ -457,7 +506,7 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getInputModeOrder() {
         return inputModeOrder;
@@ -468,6 +517,7 @@ public class TextField extends TextArea {
      * an input mode
      * 
      * @param order the order for the input modes in this field
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public void setInputModeOrder(String[] order) {
         inputModeOrder = order;
@@ -478,6 +528,7 @@ public class TextField extends TextArea {
      * Returns the order in which input modes are toggled by default
      * 
      * @return the default order of the input mode
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public static String[] getDefaultInputModeOrder() {
         return defaultInputModeOrder;
@@ -488,6 +539,7 @@ public class TextField extends TextArea {
      * disabling/hiding an input mode
      * 
      * @param order the order for the input modes in all future created fields
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public static void setDefaultInputModeOrder(String[] order) {
         defaultInputModeOrder = order;
@@ -732,7 +784,7 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public int getCursorPosition() {
         String txt = getText();
@@ -762,21 +814,21 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public int getCursorY() {
         return cursorY;
     }    
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public int getCursorX() {
         return cursorX;
     }    
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void setText(String text) {
         super.setText(text);
@@ -798,11 +850,18 @@ public class TextField extends TextArea {
     }
 
     /**
-     * Cleares the text from the TextField
+     * Clears the text from the TextField
      */
     public void clear(){
-        setText("");
-        commitChange();
+        if(isEditing()) {
+            stopEditing();
+            setText("");
+            commitChange();
+            startEditingAsync();
+        } else {
+            setText("");
+            commitChange();
+        }
     }   
     
     /**
@@ -826,7 +885,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void longKeyPress(int keyCode) {
         if(isClearKey(keyCode)){
@@ -835,7 +894,7 @@ public class TextField extends TextArea {
     }    
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean isQwertyInput() {
         if(!qwertyInitialized) {
@@ -870,6 +929,7 @@ public class TextField extends TextArea {
      * 
      * @param mode the input mode
      * @return returns true for input mode 123 by default
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     protected boolean isImmediateInputMode(String mode) {
         return "123".equals(mode);
@@ -944,7 +1004,8 @@ public class TextField extends TextArea {
         }
 
         if(isChangeInputMode(keyCode)) {
-            for(int iter = 0 ; iter < inputModeOrder.length ; iter++) {
+            int ilen = inputModeOrder.length;
+            for(int iter = 0 ; iter < ilen ; iter++) {
                 if(inputModeOrder[iter].equals(inputMode)) {
                     iter++;
                     if(iter < inputModeOrder.length) {
@@ -984,6 +1045,7 @@ public class TextField extends TextArea {
      * input and paste.
      * 
      * @param c character for insertion
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public void insertChars(String c) {
         String currentText = getText();
@@ -1056,7 +1118,8 @@ public class TextField extends TextArea {
     protected Container createSymbolTable() {
         char[] symbolArray = getSymbolTable();
         Container symbols = new Container(new GridLayout(symbolArray.length / 5, 5));
-        for(int iter = 0 ; iter < symbolArray.length ; iter++) {
+        int slen = symbolArray.length;
+        for(int iter = 0 ; iter < slen ; iter++) {
             Button button = new Button(new Command("" + symbolArray[iter]));
             button.setUIID("VKBButton");
             button.setAlignment(CENTER);
@@ -1066,7 +1129,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyReleased(int keyCode) {
         if(useNativeTextInput && Display.getInstance().isNativeInputSupported()) {
@@ -1135,16 +1198,18 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void deinitialize() {
-        getComponentForm().deregisterAnimated(this);
+        Form f = getComponentForm();
+        if(f != null) {
+            f.deregisterAnimated(this);
+        }
         // if the text field is removed without restoring the commands we need to restore them
         if(handlesInput()) {
             if(useSoftkeys) {
                 removeCommands(DELETE_COMMAND, T9_COMMAND, originalClearCommand);
             } else {
-                Form f = getComponentForm();
                 if(f != null) {
                     f.setClearCommand(originalClearCommand);
                 }
@@ -1156,7 +1221,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void setEditable(boolean b) {
         super.setEditable(b);
@@ -1174,7 +1239,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyRepeated(int keyCode) {
         if(useNativeTextInput && Display.getInstance().isNativeInputSupported()) {
@@ -1188,7 +1253,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyPressed(int keyCode) {
         if(useNativeTextInput && Display.getInstance().isNativeInputSupported()) {
@@ -1267,7 +1332,8 @@ public class TextField extends TextArea {
             }
             if(replaceMenu && originalCommands == null) {
                 originalCommands = new Command[f.getCommandCount()];
-                for(int iter = 0 ; iter < originalCommands.length ; iter++) {
+                int olen = originalCommands.length;
+                for(int iter = 0 ; iter < olen ; iter++) {
                     originalCommands[iter] = f.getCommand(iter);
                 }
                 f.removeAllCommands();
@@ -1288,7 +1354,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected boolean isSelectableInteraction() {
         return true;
@@ -1296,7 +1362,7 @@ public class TextField extends TextArea {
 
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void fireClicked() {
         if(useNativeTextInput && Display.getInstance().isNativeInputSupported()) {
@@ -1352,7 +1418,8 @@ public class TextField extends TextArea {
             }
             f.setClearCommand(originalClearCommand);
             if(replaceMenu && originalCommands != null) {
-                for(int iter = originalCommands.length - 1 ; iter >= 0 ; iter--) {
+                int olen = originalCommands.length;
+                for(int iter = olen - 1 ; iter >= 0 ; iter--) {
                     f.addCommand(originalCommands[iter]);
                 }
                 originalCommands = null;
@@ -1450,13 +1517,12 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void paint(Graphics g) {
         
         //the native input will show the string.
-        if(useNativeTextInput && Display.getInstance().isNativeInputSupported() &&
-                Display.getInstance().isTextEditing(this)) {
+        if(useNativeTextInput && Display.getInstance().isNativeEditorVisible(this)) {
             return;
         }
 
@@ -1471,7 +1537,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected Dimension calcPreferredSize() { 
         if(isSingleLineTextArea()){
@@ -1482,7 +1548,7 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     void initComponentImpl() {
         super.initComponentImpl();
@@ -1531,13 +1597,13 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean animate() {
         boolean ani = super.animate();
         
         // while native editing we don't need the cursor animations
-        if(Display.getInstance().isNativeInputSupported() && Display.getInstance().isTextEditing(this)) {
+        if(Display.getInstance().isNativeEditorVisible(this)) {
             return ani;
         }
         if(hasFocus() && isVisible()) {
@@ -1572,7 +1638,7 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void pointerReleased(int x, int y) {
         if(useNativeTextInput && Display.getInstance().isNativeInputSupported()) {
@@ -1662,8 +1728,28 @@ public class TextField extends TextArea {
                 });
                 return;
             }
-            doneListener.actionPerformed(new ActionEvent(this));
+            doneListener.actionPerformed(new ActionEvent(this,ActionEvent.Type.Done));
         }
+    }
+
+    /**
+     * Adds a listener for data change events it will be invoked for every change
+     * made to the text field, notice most platforms will invoke only the 
+     * DataChangedListener.CHANGED event
+     * 
+     * @param d the listener
+     */
+    public void addDataChangedListener(DataChangedListener d) {
+        listeners.addListener(d);
+    }
+
+    /**
+     * Removes the listener for data change events 
+     * 
+     * @param d the listener
+     */
+    public void removeDataChangedListener(DataChangedListener d) {
+        listeners.removeListener(d);
     }
     
     /**
@@ -1672,6 +1758,7 @@ public class TextField extends TextArea {
      * DataChangedListener.CHANGED event
      * 
      * @param d the listener
+     * @deprecated use #addDataChangedListener(DataChangedListener) instead
      */
     public void addDataChangeListener(DataChangedListener d) {
         listeners.addListener(d);
@@ -1681,6 +1768,7 @@ public class TextField extends TextArea {
      * Removes the listener for data change events 
      * 
      * @param d the listener
+     * @deprecated use #removeDataChangedListener(DataChangedListener) instead
      */
     public void removeDataChangeListener(DataChangedListener d) {
         listeners.removeListener(d);
@@ -1698,7 +1786,7 @@ public class TextField extends TextArea {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     void onEditComplete(String text) {
         super.onEditComplete(text);
@@ -1790,6 +1878,7 @@ public class TextField extends TextArea {
      * Key to change the input mode on the device
      * 
      * @param k key to change the input mode
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public static void setDefaultChangeInputModeKey(int k) {
         defaultChangeInputModeKey = k;
@@ -1799,6 +1888,7 @@ public class TextField extends TextArea {
      * Key to change the input mode on the device
      * 
      * @return key to change the input mode
+     * @deprecated this is a method for use only on old J2ME devices and is ignored everywhere else
      */
     public static int getDefaultChangeInputModeKey() {
         return defaultChangeInputModeKey;
@@ -1864,7 +1954,7 @@ public class TextField extends TextArea {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void setAlignment(int align) {
         if (align == Component.CENTER) {

@@ -35,6 +35,7 @@ import com.codename1.ui.geom.GeneralPath;
 import com.codename1.ui.geom.Rectangle2D;
 import com.codename1.charts.util.ColorUtil;
 import com.codename1.charts.util.MathHelper;
+import com.codename1.ui.plaf.UIManager;
 
 
 
@@ -165,7 +166,8 @@ public abstract class AbstractChart  {
       String[] lines = split(text,"\n");
       Rectangle2D rect = new Rectangle2D();
       int yOff = 0;
-      for (int i = 0; i < lines.length; ++i) {
+      int llen = lines.length;
+      for (int i = 0; i < llen; ++i) {
         canvas.drawText(lines[i], x, y + yOff, paint);
         paint.getTextBounds(lines[i], 0, lines[i].length(), rect);
         yOff = yOff + (int)rect.getHeight() + 5; // space between lines is 5
@@ -404,17 +406,20 @@ public abstract class AbstractChart  {
    * @return the text to fit into the space
    */
   private String getFitText(String text, float width, Paint paint) {
-    String newText = text;
-    int length = text.length();
-    int diff = 0;
-    while (paint.measureText(newText) > width && diff < length) {
-      diff++;
-      newText = text.substring(0, length - diff) + "...";
-    }
-    if (diff == length) {
-      newText = "...";
-    }
-    return newText;
+      if(UIManager.getInstance().getLookAndFeel().isDefaultEndsWith3Points()) {
+        String newText = text;
+        int length = text.length();
+        int diff = 0;
+        while (paint.measureText(newText) > width && diff < length) {
+          diff++;
+          newText = text.substring(0, length - diff) + "...";
+        }
+        if (diff == length) {
+          newText = "...";
+        }
+        return newText;
+      }
+      return text;
   }
 
   /**
@@ -493,7 +498,7 @@ public abstract class AbstractChart  {
           Rectangle2D prevLabelBounds = prevLabelsBounds.get(j);
           if (prevLabelBounds.intersects(xLabel, yLabel, widthLabel, size)) {
             intersects = true;
-            yLabel = (float)Math.max(yLabel, prevLabelBounds.getX()+prevLabelBounds.getHeight());
+            yLabel = (float)Math.max(yLabel, prevLabelBounds.getY()+prevLabelBounds.getHeight());
           }
         }
         
@@ -536,7 +541,8 @@ public abstract class AbstractChart  {
   private static char[] stopCharCandidates = "!@#$%^&*()?><,./+-qwertyuiop[zxcvbnm,./\\|}{".toCharArray();
     private static String[] split(String input, String sep){
         if ( sep.length() > 1 ){
-            for ( int i=0; i<stopCharCandidates.length; i++){
+            int clen = stopCharCandidates.length;
+            for ( int i=0; i<clen; i++){
                 if ( input.indexOf(stopCharCandidates[i]) == -1 ){
                     input = com.codename1.util.StringUtil.replaceAll(input, sep, String.valueOf(stopCharCandidates[i]));
                     sep = String.valueOf(stopCharCandidates[i]);

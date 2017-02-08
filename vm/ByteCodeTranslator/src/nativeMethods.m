@@ -14,6 +14,8 @@
 #include "java_lang_Runnable.h"
 #include "java_lang_Throwable.h"
 #include "java_lang_StringBuilder.h"
+#include "java_util_HashMap.h"
+#include "java_util_HashMap_Entry.h"
 #import <Foundation/Foundation.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -55,7 +57,105 @@ JAVA_VOID java_lang_String_releaseNSString___long(CODENAME_ONE_THREAD_STATE, JAV
     }
 }
 
+JAVA_BOOLEAN java_lang_String_equals___java_lang_Object_R_boolean(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_OBJECT __cn1Arg1) {
+    if(__cn1ThisObject == __cn1Arg1) {
+        return JAVA_TRUE;
+    }
+    if(__cn1ThisObject == JAVA_NULL) {
+        THROW_NULL_POINTER_EXCEPTION();
+    }
+    if(__cn1Arg1 == JAVA_NULL || __cn1Arg1->__codenameOneParentClsReference->classId != __cn1ThisObject->__codenameOneParentClsReference->classId) {
+        return JAVA_FALSE;
+    }
+    struct obj__java_lang_String* t = (struct obj__java_lang_String*)__cn1ThisObject;
+    struct obj__java_lang_String* o = (struct obj__java_lang_String*)__cn1Arg1;
+    if(t->java_lang_String_count != o->java_lang_String_count) {
+        return JAVA_FALSE;
+    }
+    
+    JAVA_ARRAY_CHAR* oa = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)o->java_lang_String_value)->data;
+    JAVA_ARRAY_CHAR* ta = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)t->java_lang_String_value)->data;
+    JAVA_INT oo = o->java_lang_String_offset;
+    JAVA_INT to = t->java_lang_String_offset;
+    
+    for(int iter = 0 ; iter < t->java_lang_String_count ; iter++) {
+        if(oa[iter+oo] != ta[iter+to]) {
+            return JAVA_FALSE;
+        }
+    }
+    return JAVA_TRUE;
+}
+
+JAVA_INT java_lang_Character_toLowerCase___int_R_int(CODENAME_ONE_THREAD_STATE, JAVA_INT __cn1Arg1) {
+    if ('A' <= __cn1Arg1 && __cn1Arg1 <= 'Z') {
+        return (JAVA_CHAR) (__cn1Arg1 + ('a' - 'A'));
+    }
+    return __cn1Arg1;
+}
+
+JAVA_CHAR java_lang_Character_toLowerCase___char_R_char(CODENAME_ONE_THREAD_STATE, JAVA_INT __cn1Arg1) {
+    if ('A' <= __cn1Arg1 && __cn1Arg1 <= 'Z') {
+        return (JAVA_CHAR) (__cn1Arg1 + ('a' - 'A'));
+    }
+    return __cn1Arg1;
+}
+
+JAVA_BOOLEAN java_lang_String_equalsIgnoreCase___java_lang_String_R_boolean(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_OBJECT __cn1Arg1) {
+    if(__cn1ThisObject == __cn1Arg1) {
+        return JAVA_TRUE;
+    }
+    if(__cn1ThisObject == JAVA_NULL) {
+        THROW_NULL_POINTER_EXCEPTION();
+    }
+    if(__cn1Arg1 == JAVA_NULL || __cn1Arg1->__codenameOneParentClsReference->classId != __cn1ThisObject->__codenameOneParentClsReference->classId) {
+        return JAVA_FALSE;
+    }
+    struct obj__java_lang_String* t = (struct obj__java_lang_String*)__cn1ThisObject;
+    struct obj__java_lang_String* o = (struct obj__java_lang_String*)__cn1Arg1;
+    if(t->java_lang_String_count != o->java_lang_String_count) {
+        return JAVA_FALSE;
+    }
+    
+    JAVA_ARRAY_CHAR* oa = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)o->java_lang_String_value)->data;
+    JAVA_ARRAY_CHAR* ta = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)t->java_lang_String_value)->data;
+    JAVA_INT oo = o->java_lang_String_offset;
+    JAVA_INT to = t->java_lang_String_offset;
+    
+    for(int iter = 0 ; iter < t->java_lang_String_count ; iter++) {
+        JAVA_ARRAY_CHAR jo = oa[iter+oo];
+        JAVA_ARRAY_CHAR jt = ta[iter+oo];
+        if ('A' <= jo && jo <= 'Z') {
+            jo = (JAVA_ARRAY_CHAR) (jo + ('a' - 'A'));
+        }
+        if ('A' <= jt && jt <= 'Z') {
+            jt = (JAVA_ARRAY_CHAR) (jt + ('a' - 'A'));
+        }
+        if(jo != jt) {
+            return JAVA_FALSE;
+        }
+    }
+    return JAVA_TRUE;
+}
+
+JAVA_INT java_lang_String_hashCode___R_int(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject) {
+    struct obj__java_lang_String* t = (struct obj__java_lang_String*)__cn1ThisObject;
+    JAVA_INT hash = t->java_lang_String_hashCode;
+    if (hash == 0) {
+        if (t->java_lang_String_count == 0) {
+            return 0;
+        }
+        JAVA_INT end = t->java_lang_String_count + t->java_lang_String_offset;
+        JAVA_ARRAY_CHAR* chars = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)t->java_lang_String_value)->data;
+        for (JAVA_INT i = t->java_lang_String_offset; i < end; ++i) {
+            hash = 31*hash + chars[i];
+        }
+        t->java_lang_String_hashCode = hash;
+    }
+    return hash;
+}
+
 JAVA_OBJECT java_lang_String_bytesToChars___byte_1ARRAY_int_int_java_lang_String_R_char_1ARRAY(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT b, JAVA_INT off, JAVA_INT len, JAVA_OBJECT encoding) {
+    enteringNativeAllocations();
     JAVA_ARRAY_BYTE* sourceData = (JAVA_ARRAY_BYTE*)((JAVA_ARRAY)b)->data;
     sourceData += off;
     NSStringEncoding enc;
@@ -71,7 +171,7 @@ JAVA_OBJECT java_lang_String_bytesToChars___byte_1ARRAY_int_int_java_lang_String
             for(int iter = 0 ; iter < len ; iter++) {
                 dest[iter] = sourceData[iter];
             }
-            
+            finishedNativeAllocations();
             return destArr;
         } else {
             if(compareStringToCharArray("UTF-16", encArr, arrLength)) {
@@ -106,7 +206,7 @@ JAVA_OBJECT java_lang_String_bytesToChars___byte_1ARRAY_int_int_java_lang_String
             for(int iter = 0 ; iter < len ; iter++) {
                 dest[iter] = sourceData[iter];
             }
-            
+            finishedNativeAllocations();
             return destArr;
         }
     }
@@ -114,6 +214,17 @@ JAVA_OBJECT java_lang_String_bytesToChars___byte_1ARRAY_int_int_java_lang_String
     // this allows emojii to work with the Strings properly
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
     NSString* nsStr = [[NSString alloc] initWithBytes:sourceData length:len encoding:enc];
+    if (nsStr == nil) {
+        nsStr = [[NSString alloc] initWithBytes:sourceData length:len encoding:NSISOLatin1StringEncoding];
+        if (nsStr == nil) {
+            JAVA_OBJECT ex = __NEW_java_lang_RuntimeException(CN1_THREAD_STATE_PASS_SINGLE_ARG);
+            java_lang_RuntimeException___INIT_____java_lang_String(CN1_THREAD_STATE_PASS_ARG ex, newStringFromCString(CN1_THREAD_STATE_PASS_ARG "Encoding Error"));
+            finishedNativeAllocations();
+            throwException(threadStateData, ex);
+            
+            return NULL;
+        }
+    }
 
     JAVA_OBJECT destArr = __NEW_ARRAY_JAVA_CHAR(threadStateData, [nsStr length]);
     __block JAVA_ARRAY_CHAR* dest = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)destArr)->data;
@@ -134,6 +245,7 @@ JAVA_OBJECT java_lang_String_bytesToChars___byte_1ARRAY_int_int_java_lang_String
 
     [nsStr release];
     [pool release];
+    finishedNativeAllocations();
     return destArr;
 }
 
@@ -651,6 +763,15 @@ JAVA_OBJECT java_lang_Class_newInstanceImpl___R_java_lang_Object(CODENAME_ONE_TH
     return f(threadStateData);
 }
 
+JAVA_OBJECT java_lang_Enum_valueOf___java_lang_Class_java_lang_String_R_java_lang_Enum(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT cls, JAVA_OBJECT value) {
+    struct clazz* clz = (struct clazz*)cls;
+    enumValueOfFunctionPointer f = clz->enumValueOfFp;
+    if (f == 0) {
+        return JAVA_NULL;
+    }
+    return f(threadStateData, value);
+}
+
 JAVA_OBJECT java_lang_Object_toString___R_java_lang_String(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT obj) {
     char s[32];
     sprintf(s, "Obj[%i]", ((int)obj));
@@ -839,9 +960,16 @@ JAVA_VOID monitorEnter(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT obj) {
             ((struct CN1ThreadData*)obj->__codenameOneThreadData)->counter++;
             return;
         }
+        threadStateData->threadActive = JAVA_FALSE;
         err = pthread_mutex_lock(&((struct CN1ThreadData*)obj->__codenameOneThreadData)->__codenameOneMutex);
         ((struct CN1ThreadData*)obj->__codenameOneThreadData)->counter++;
         ((struct CN1ThreadData*)obj->__codenameOneThreadData)->ownerThread = own;
+        while (threadStateData->threadBlockedByGC) {
+            usleep(1000);
+        }
+        threadStateData->threadActive = JAVA_TRUE;
+        
+
     }
     //NSLog(@"Locking mutex %i started from %@", (int)obj->__codenameOneMutex, [NSThread callStackSymbols]);
     //NSLog(@"Locking mutex %i completed", (int)obj->__codenameOneMutex);
@@ -969,15 +1097,17 @@ void* threadRunner(void *x)
     d->threadActive = JAVA_TRUE;
     d->currentThreadObject = t;
     
+    if(threadsToDelete == 0) {
+        threadsToDelete = malloc(NUMBER_OF_SUPPORTED_THREADS * sizeof(struct ThreadLocalData*));
+        memset(threadsToDelete, 0, NUMBER_OF_SUPPORTED_THREADS * sizeof(struct ThreadLocalData*));
+    }
+    
     java_lang_Thread_runImpl___long(d, t, currentThreadId());
     
     // we remove the thread here since this is the only place we can do this
     // we add the thread in the getThreadLocalData() method to handle native threads
     // too. Hopefully we won't spawn too many of those...
-    if(threadsToDelete == 0) {
-        threadsToDelete = malloc(NUMBER_OF_SUPPORTED_THREADS * sizeof(struct ThreadLocalData*));
-        memset(threadsToDelete, 0, NUMBER_OF_SUPPORTED_THREADS * sizeof(struct ThreadLocalData*));
-    }
+    
     lockCriticalSection();
     for(int iter = 0 ; iter < NUMBER_OF_SUPPORTED_THREADS ; iter++) {
         if(allThreads[iter] == d) {
@@ -1067,25 +1197,13 @@ void initMethodStack(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT __cn1ThisObject, int
     threadStateData->callStackOffset++;
 }
 
-void releaseForReturn(CODENAME_ONE_THREAD_STATE, int cn1LocalsBeginInThread, int stackPointer, int cn1SizeOfLocals, struct elementStruct* stack, struct elementStruct* locals) {
-    /*for(int iter = 0 ; iter < stackPointer ; iter++) {
-        safeRelease(threadStateData, &stack[iter]);
-    }
-    for(int iter = 0 ; iter < cn1SizeOfLocals ; iter++) {
-        safeRelease(threadStateData, &locals[iter]);
-    }*/
+void releaseForReturn(CODENAME_ONE_THREAD_STATE, int cn1LocalsBeginInThread) {
     threadStateData->threadObjectStackOffset = cn1LocalsBeginInThread;
     threadStateData->callStackOffset--;
 }
 
-void releaseForReturnInException(CODENAME_ONE_THREAD_STATE, int cn1LocalsBeginInThread, int stackPointer, int cn1SizeOfLocals, struct elementStruct* stack, struct elementStruct* locals, int methodBlockOffset) {
+void releaseForReturnInException(CODENAME_ONE_THREAD_STATE, int cn1LocalsBeginInThread, int methodBlockOffset) {
     threadStateData->tryBlockOffset = methodBlockOffset;
-    /*for(int iter = 0 ; iter < stackPointer ; iter++) {
-        safeRelease(threadStateData, &stack[iter]);
-    }
-    for(int iter = 0 ; iter < cn1SizeOfLocals ; iter++) {
-        safeRelease(threadStateData, &locals[iter]);
-    }*/
     threadStateData->threadObjectStackOffset = cn1LocalsBeginInThread;
     threadStateData->callStackOffset--;
 }
@@ -1096,6 +1214,25 @@ JAVA_LONG java_lang_Runtime_totalMemoryImpl___R_long(CODENAME_ONE_THREAD_STATE) 
 
 JAVA_LONG java_lang_Runtime_freeMemoryImpl___R_long(CODENAME_ONE_THREAD_STATE) {
     return 0;
+}
+
+
+JAVA_BOOLEAN java_util_HashMap_areEqualKeys___java_lang_Object_java_lang_Object_R_boolean(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT __cn1Arg1, JAVA_OBJECT __cn1Arg2) {
+    if(__cn1Arg1 == __cn1Arg2) {
+        return JAVA_TRUE;
+    }
+    return virtual_java_lang_Object_equals___java_lang_Object_R_boolean(threadStateData, __cn1Arg1, __cn1Arg2);
+}
+
+JAVA_OBJECT java_util_HashMap_findNonNullKeyEntry___java_lang_Object_int_int_R_java_util_HashMap_Entry(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_OBJECT key, JAVA_INT index, JAVA_INT keyHash) {
+    struct obj__java_util_HashMap* t = (struct obj__java_util_HashMap*)__cn1ThisObject;
+    JAVA_ARRAY_OBJECT* obj = ((JAVA_ARRAY)t->java_util_HashMap_elementData)->data;
+    struct obj__java_util_HashMap_Entry* m = (struct obj__java_util_HashMap_Entry*)obj[index];
+    while (m != 0
+           && (m->java_util_HashMap_Entry_origKeyHash != keyHash || !java_util_HashMap_areEqualKeys___java_lang_Object_java_lang_Object_R_boolean(threadStateData, key, m->java_util_MapEntry_key))) {
+        m = (struct obj__java_util_HashMap_Entry*)m->java_util_HashMap_Entry_next;
+    }
+    return (JAVA_OBJECT)m;
 }
 
 JAVA_OBJECT java_util_Locale_getOSLanguage___R_java_lang_String(CODENAME_ONE_THREAD_STATE) {
@@ -1173,4 +1310,125 @@ JAVA_OBJECT java_text_DateFormat_format___java_util_Date_java_lang_StringBuffer_
     POOL_END();
 
     return str;
+}
+
+
+JAVA_CHAR java_lang_String_charAt___int_R_char(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_INT __cn1Arg1) {
+    //DEFINE_INSTANCE_METHOD_STACK(3, 2, 0, 752, 755);
+    struct obj__java_lang_String* encString = (struct obj__java_lang_String*)__cn1ThisObject;
+    JAVA_ARRAY arr =(JAVA_ARRAY)(encString->java_lang_String_value);
+    if(__cn1Arg1 < 0 || __cn1Arg1 >= arr->length) { THROW_ARRAY_INDEX_EXCEPTION(__cn1Arg1); }
+    JAVA_ARRAY_CHAR* encArr = (JAVA_ARRAY_CHAR*)arr->data;
+    JAVA_INT index = get_field_java_lang_String_offset(__cn1ThisObject)+__cn1Arg1;
+    //releaseForReturn(threadStateData, cn1LocalsBeginInThread, stackPointer - 1, 2, stack, locals);
+    return encArr[index];
+    
+}
+
+JAVA_INT java_lang_String_indexOf___int_int_R_int(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_INT ch, JAVA_INT fromIndex) {
+    fromIndex = MAX(0, fromIndex);
+    struct obj__java_lang_String* encString = (struct obj__java_lang_String*)__cn1ThisObject;
+    JAVA_ARRAY_CHAR* encArr = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)(encString->java_lang_String_value))->data;
+    //releaseForReturn(threadStateData, cn1LocalsBeginInThread, stackPointer - 1, 2, stack, locals);
+    int off = get_field_java_lang_String_offset(__cn1ThisObject);
+    int endOff = off+encString->java_lang_String_count;
+    for (int i=off+fromIndex; i<endOff; i++) {
+        if (encArr[i] == ch) {
+            return i-off;
+        }
+    }
+    return -1;
+}
+
+JAVA_OBJECT java_lang_String_toString___R_java_lang_String(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject) {
+    return __cn1ThisObject;
+}
+
+JAVA_CHAR java_lang_StringBuilder_charAt___int_R_char(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_INT index) {
+    struct obj__java_lang_StringBuilder* t = (struct obj__java_lang_StringBuilder*)__cn1ThisObject;
+    if(index < 0 || index >= ((JAVA_ARRAY)t->java_lang_StringBuilder_value)->length) { THROW_ARRAY_INDEX_EXCEPTION(index); }
+    JAVA_ARRAY_CHAR* dat = ((JAVA_ARRAY)t->java_lang_StringBuilder_value)->data;
+    return dat[index];
+}
+
+JAVA_OBJECT java_lang_StringBuilder_append___java_lang_String_R_java_lang_StringBuilder(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_OBJECT str) {
+    enteringNativeAllocations();
+    if (str == JAVA_NULL) {
+        java_lang_StringBuilder_appendNull__(threadStateData, __cn1ThisObject);
+        finishedNativeAllocations();
+        return __cn1ThisObject;
+    }
+    int length = java_lang_String_length___R_int(threadStateData, str);
+    struct obj__java_lang_StringBuilder* t = (struct obj__java_lang_StringBuilder*)__cn1ThisObject;
+    int newCount = t->java_lang_StringBuilder_count + length;
+    if (newCount > ((JAVA_ARRAY)t->java_lang_StringBuilder_value)->length) {
+        java_lang_StringBuilder_enlargeBuffer___int(threadStateData, __cn1ThisObject, newCount);
+    }
+    java_lang_String_getChars___int_int_char_1ARRAY_int(threadStateData, str, 0, length, t->java_lang_StringBuilder_value, t->java_lang_StringBuilder_count);
+    t->java_lang_StringBuilder_count = newCount;
+    finishedNativeAllocations();
+    return __cn1ThisObject;
+    
+}
+
+JAVA_VOID java_lang_StringBuilder_getChars___int_int_char_1ARRAY_int(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_INT start, JAVA_INT end, JAVA_OBJECT dst, JAVA_INT dstStart) {
+    struct obj__java_lang_StringBuilder* t = (struct obj__java_lang_StringBuilder*)__cn1ThisObject;
+    java_lang_System_arraycopy___java_lang_Object_int_java_lang_Object_int_int(threadStateData, t->java_lang_StringBuilder_value, start, dst, dstStart, end - start);
+}
+
+JAVA_OBJECT java_lang_StringBuilder_append___java_lang_Object_R_java_lang_StringBuilder(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_OBJECT obj) {
+    if(obj == JAVA_NULL) {
+        java_lang_StringBuilder_appendNull__(threadStateData, __cn1ThisObject);
+        return __cn1ThisObject;
+    }
+    return java_lang_StringBuilder_append___java_lang_String_R_java_lang_StringBuilder(threadStateData, __cn1ThisObject, virtual_java_lang_Object_toString___R_java_lang_String(threadStateData, obj));
+}
+
+JAVA_OBJECT java_lang_StringBuilder_append___char_R_java_lang_StringBuilder(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_CHAR __cn1Arg1) {
+    enteringNativeAllocations();
+    JAVA_INT len = get_field_java_lang_StringBuilder_count(__cn1ThisObject);
+    JAVA_OBJECT value = get_field_java_lang_StringBuilder_value(__cn1ThisObject);
+    JAVA_INT valueLen = ((JAVA_ARRAY)value)->length;
+    if (len==valueLen) {
+        java_lang_StringBuilder_enlargeBuffer___int(threadStateData, __cn1ThisObject, len+1);
+        value = get_field_java_lang_StringBuilder_value(__cn1ThisObject);
+    }
+    JAVA_ARRAY_CHAR* d = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)value)->data;
+    d[len] = __cn1Arg1;
+    set_field_java_lang_StringBuilder_count(threadStateData, len+1, __cn1ThisObject);
+    finishedNativeAllocations();
+    return __cn1ThisObject;
+}
+
+JAVA_VOID java_lang_String_getChars___int_int_char_1ARRAY_int(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject, JAVA_INT __cn1Arg1, JAVA_INT __cn1Arg2, JAVA_OBJECT __cn1Arg3, JAVA_INT __cn1Arg4) {
+    
+    JAVA_INT offset = get_field_java_lang_String_offset(__cn1ThisObject);
+    JAVA_ARRAY srcArr = (JAVA_ARRAY)get_field_java_lang_String_value(__cn1ThisObject);
+    JAVA_ARRAY_CHAR* src = (JAVA_ARRAY_CHAR*)srcArr->data;
+    JAVA_ARRAY_CHAR* dst = (JAVA_ARRAY_CHAR*)((JAVA_ARRAY)__cn1Arg3)->data;
+    int start = offset + __cn1Arg1;
+    int end = offset + __cn1Arg2;
+    for (JAVA_INT i=start; i<end; i++) {
+        dst[__cn1Arg4++] = src[i];
+    }
+}
+
+JAVA_OBJECT java_lang_String_toUpperCase___R_java_lang_String(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject) {
+    enteringNativeAllocations();
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+    NSString *nsString = [toNSString(CN1_THREAD_STATE_PASS_ARG __cn1ThisObject) uppercaseString];
+    JAVA_OBJECT jString = fromNSString(CN1_THREAD_STATE_PASS_ARG nsString);
+    [pool release];
+    finishedNativeAllocations();
+    return jString;
+}
+
+JAVA_OBJECT java_lang_String_toLowerCase___R_java_lang_String(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT  __cn1ThisObject) {
+    enteringNativeAllocations();
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+    NSString *nsString = [toNSString(CN1_THREAD_STATE_PASS_ARG __cn1ThisObject) lowercaseString];
+    JAVA_OBJECT jString = fromNSString(CN1_THREAD_STATE_PASS_ARG nsString);
+    [pool release];
+    finishedNativeAllocations();
+    return jString;
 }

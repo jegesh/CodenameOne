@@ -22,9 +22,13 @@
  */
 package com.codename1.ui.validation;
 
+import com.codename1.components.InteractionDialog;
 import com.codename1.ui.Button;
 import com.codename1.ui.CheckBox;
 import com.codename1.ui.Component;
+import com.codename1.ui.Display;
+import com.codename1.ui.FontImage;
+import com.codename1.ui.Form;
 import com.codename1.ui.Graphics;
 import com.codename1.ui.Image;
 import com.codename1.ui.Label;
@@ -36,7 +40,11 @@ import com.codename1.ui.TextField;
 import com.codename1.ui.events.ActionEvent;
 import com.codename1.ui.events.ActionListener;
 import com.codename1.ui.events.DataChangedListener;
+import com.codename1.ui.events.FocusListener;
+import com.codename1.ui.events.ScrollListener;
 import com.codename1.ui.geom.Rectangle;
+import com.codename1.ui.layouts.BorderLayout;
+import com.codename1.ui.plaf.Style;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -49,7 +57,14 @@ import java.util.HashMap;
  */
 public class Validator {    
     private static final String VALID_MARKER = "cn1$$VALID_MARKER";
-            
+    
+    private InteractionDialog message = new InteractionDialog();
+    
+    /**
+     * Error message UIID defaults to DialogBody. Allows customizing the look of the message
+     */
+    private String errorMessageUIID = "DialogBody";
+    
     /**
      * Indicates the default mode in which validation failures are expressed
      * @return the defaultValidationFailureHighlightMode
@@ -203,6 +218,39 @@ public class Validator {
     public void setValidationEmblemPositionY(float validationEmblemPositionY) {
         this.validationEmblemPositionY = validationEmblemPositionY;
     }
+
+    /**
+     * Indicates whether an error message should be shown for the focused component
+     * @return true if the error message should be displayed
+     */
+    public boolean isShowErrorMessageForFocusedComponent() {
+        return showErrorMessageForFocusedComponent;
+    }
+
+    /**
+     * Indicates whether an error message should be shown for the focused component
+     * 
+     * @param showErrorMessageForFocusedComponent true to show the error message
+     */
+    public void setShowErrorMessageForFocusedComponent(boolean showErrorMessageForFocusedComponent) {
+        this.showErrorMessageForFocusedComponent = showErrorMessageForFocusedComponent;
+    }
+
+    /**
+     * Error message UIID defaults to DialogBody. Allows customizing the look of the message
+     * @return the errorMessageUIID
+     */
+    public String getErrorMessageUIID() {
+        return errorMessageUIID;
+    }
+
+    /**
+     * Error message UIID defaults to DialogBody. Allows customizing the look of the message
+     * @param errorMessageUIID the errorMessageUIID to set
+     */
+    public void setErrorMessageUIID(String errorMessageUIID) {
+        this.errorMessageUIID = errorMessageUIID;
+    }
     /**
      * Indicates the validation failure modes
      */
@@ -216,7 +264,7 @@ public class Validator {
     /**
      * Indicates the default mode in which validation failures are expressed
      */
-    private static HighlightMode defaultValidationFailureHighlightMode = HighlightMode.UIID;
+    private static HighlightMode defaultValidationFailureHighlightMode = HighlightMode.EMBLEM;
 
     /**
      * Indicates the mode in which validation failures are expressed
@@ -270,6 +318,22 @@ public class Validator {
     private static boolean validateOnEveryKey = false;
     
     /**
+     * Indicates whether an error message should be shown for the focused component
+     */
+    private boolean showErrorMessageForFocusedComponent;
+
+    /**
+     * Default constructor
+     */
+    public Validator() {
+        if(defaultValidationFailedEmblem == null) {
+            // initialize the default emblem
+            defaultValidationFailedEmblem = FontImage.createMaterial(FontImage.MATERIAL_CANCEL, "InvalidEmblem", 3);
+            validationFailedEmblem = defaultValidationFailedEmblem;
+        }
+    }
+    
+    /**
      * Places a constraint on the validator, returns this object so constraint additions can be chained. 
      * Notice that only one constraint 
      * @param cmp the component to validate
@@ -283,6 +347,10 @@ public class Validator {
             constraintList.put(cmp, new GroupConstraint(c));
         }
         bindDataListener(cmp);
+        boolean isV = isValid();
+        for(Component btn : submitButtons) {
+            btn.setEnabled(isV);
+        }
         return this;
     }
     
@@ -331,11 +399,65 @@ public class Validator {
     /**
      * Binds an event listener to the given component
      * @param cmp the component to bind the data listener to
+     * @deprecated this method was exposed by accident, constraint implicitly calls it and you don't need to 
+     * call it directly. It will be made protected in a future update to Codename One!
      */
     public void bindDataListener(Component cmp) {
+        if(showErrorMessageForFocusedComponent) {
+            cmp.addFocusListener(new FocusListener() {
+                public void focusGained(Component cmp) {
+                    // special case. Before the form is showing don't show error dialogs
+                    Form p = cmp.getComponentForm();
+                    if(p != Display.getInstance().getCurrent()) {
+                        return;
+                    }
+                    if(message != null) {
+                        message.dispose();
+                    }
+                    if(!isValid(cmp)) {
+                        String err = getErrorMessage(cmp);
+                        if(err != null && err.length() > 0) {
+                            message = new InteractionDialog(err);
+                            message.getTitleComponent().setUIID(errorMessageUIID);
+                            message.setAnimateShow(false);
+                            if(validationFailureHighlightMode == HighlightMode.EMBLEM || validationFailureHighlightMode == HighlightMode.UIID_AND_EMBLEM) {
+                                int xpos = cmp.getAbsoluteX();
+                                int ypos = cmp.getAbsoluteY();
+                                Component scr = cmp.getScrollable();
+                                if(scr != null) {
+                                    xpos -= scr.getScrollX();
+                                    ypos -= scr.getScrollY();
+                                    scr.addScrollListener(new ScrollListener() {
+                                        public void scrollChanged(int scrollX, int scrollY, int oldscrollX, int oldscrollY) {
+                                            if (message != null) {
+                                                message.dispose();
+                                            }
+                                            message = null;
+                                        }
+                                    });
+                                }
+                                float width = cmp.getWidth();
+                                float height = cmp.getHeight();
+                                xpos += Math.round(width * validationEmblemPositionX);
+                                ypos += Math.round(height * validationEmblemPositionY);
+                                if(message != null) {
+                                    message.showPopupDialog(new Rectangle(xpos, ypos, validationFailedEmblem.getWidth(), 
+                                            validationFailedEmblem.getHeight()));
+                                }
+                            } else {
+                                message.showPopupDialog(cmp);
+                            }
+                        }
+                    }
+                }
+
+                public void focusLost(Component cmp) {
+                }
+            });
+        }
         if(validateOnEveryKey) {
             if(cmp instanceof TextField) {
-                ((TextField)cmp).addDataChangeListener(new ComponentListener(cmp));
+                ((TextField)cmp).addDataChangedListener(new ComponentListener(cmp));
                 return;
             }
         }
@@ -350,7 +472,7 @@ public class Validator {
         if(cmp instanceof CheckBox || cmp instanceof RadioButton) {
             ((Button)cmp).addActionListener(new ComponentListener(cmp));
             return;
-        }
+        } 
     }
 
     /**
@@ -384,14 +506,28 @@ public class Validator {
         return constraintList.get(cmp).isValid(val);
     }
     
+    /**
+     * Returns the validation error message for the given component or null if no such message exists
+     * @param cmp the invalid component
+     * @return a string representing the error message
+     */
+    public String getErrorMessage(Component cmp) {
+        return constraintList.get(cmp).getDefaultFailMessage();
+    }
+
     void setValid(Component cmp, boolean v) {
         Boolean b = (Boolean)cmp.getClientProperty(VALID_MARKER);
         if(b != null && b.booleanValue() == v) {
-            for(Component c : submitButtons) {
-                c.setEnabled(b.booleanValue());
+            /*
+            if (!v) {
+                for(Component c : submitButtons) {
+                    c.setEnabled(false);
+                }
             }
+            */
             return;
         }
+        cmp.putClientProperty(VALID_MARKER, v);
         if(!v) {
             // if one component is invalid... just disable the submit buttons
             for(Component c : submitButtons) {
@@ -402,8 +538,11 @@ public class Validator {
             for(Component c : submitButtons) {
                 c.setEnabled(isV);
             }
+            if(message != null && cmp.hasFocus()) {
+                message.dispose();
+            }
         }
-        cmp.putClientProperty(VALID_MARKER, v);
+        
         if(validationFailureHighlightMode == HighlightMode.EMBLEM || validationFailureHighlightMode == HighlightMode.UIID_AND_EMBLEM) {
             if(!(cmp.getComponentForm().getGlassPane() instanceof ComponentListener)) {
                 cmp.getComponentForm().setGlassPane(new ComponentListener(null));

@@ -24,6 +24,7 @@ package com.codename1.impl.ios;
 
 import com.codename1.contacts.Contact;
 import com.codename1.payment.Product;
+import com.codename1.social.GoogleImpl;
 import com.codename1.social.LoginCallback;
 import com.codename1.ui.geom.Rectangle;
 import java.io.Writer;
@@ -36,6 +37,10 @@ import java.util.Vector;
  * @author Shai Almog
  */
 public final class IOSNative {
+
+    native long beginBackgroundTask();
+
+    native void endBackgroundTask(long taskId);
     
     
     //native void startMainThread(Runnable r);
@@ -44,7 +49,8 @@ public final class IOSNative {
     native boolean isPainted();
     native int getDisplayWidth();
     native int getDisplayHeight();
-    native void editStringAt(int x, int y, int w, int h, long peer, boolean singleLine, int rows, int maxSize, int constraint, String text, boolean forceSlideUp, int color, long imagePeer, int padTop, int padBottom, int padLeft, int padRight, String hint, boolean showToolbar);
+    native void editStringAt(int x, int y, int w, int h, long peer, boolean singleLine, int rows, int maxSize, int constraint, String text, boolean forceSlideUp, int color, long imagePeer, int padTop, int padBottom, int padLeft, int padRight, String hint, boolean showToolbar, boolean blockCopyPaste);
+    native void resizeNativeTextView(int x, int y, int w, int h, int padTop, int padRight, int padBottom, int padLeft);
     native void flushBuffer(long peer, int x, int y, int width, int height);
     native void imageRgbToIntArray(long imagePeer, int[] arr, int x, int y, int width, int height, int imgWidth, int imgHeight);
     native long createImageFromARGB(int[] argb, int width, int height);
@@ -65,8 +71,6 @@ public final class IOSNative {
     native void nativeFillRoundRectGlobal(int color, int alpha, int x, int y, int width, int height, int arcWidth, int arcHeight);
     native void nativeFillArcMutable(int color, int alpha, int x, int y, int width, int height, int startAngle, int arcAngle);
     native void nativeDrawArcMutable(int color, int alpha, int x, int y, int width, int height, int startAngle, int arcAngle);
-    native void nativeFillArcGlobal(int color, int alpha, int x, int y, int width, int height, int startAngle, int arcAngle);
-    native void nativeDrawArcGlobal(int color, int alpha, int x, int y, int width, int height, int startAngle, int arcAngle);
     native void nativeDrawStringMutable(int color, int alpha, long fontPeer, String str, int x, int y);
     native void nativeDrawStringGlobal(int color, int alpha, long fontPeer, String str, int x, int y);
     native void nativeDrawImageMutable(long peer, int alpha, int x, int y, int width, int height);
@@ -130,7 +134,11 @@ public final class IOSNative {
 
     native void flashBacklight(int duration);
 
-    native boolean isMinimized();
+    // SJH Nov. 17, 2015 : Removing native isMinimized() method because it conflicted with
+    // tracking on the java side.  It caused the app to still be minimized inside start()
+    // method.  
+    // Related to this issue https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!msg/codenameone-discussions/Ajo2fArN8mc/KrF_e9cTDwAJ
+    //native boolean isMinimized();
     
     native boolean minimizeApplication();
 
@@ -209,12 +217,12 @@ public final class IOSNative {
 
     native String getBrowserURL(long browserPeer);
     
-    native long createVideoComponent(String url);
-    native long createVideoComponent(byte[] video);
-    native long createVideoComponentNSData(long video);
-    native long createNativeVideoComponent(String url);
-    native long createNativeVideoComponent(byte[] video);
-    native long createNativeVideoComponentNSData(long video);
+    native long createVideoComponent(String url, int onCompletionCallbackId);
+    native long createVideoComponent(byte[] video, int onCompletionCallbackId);
+    native long createVideoComponentNSData(long video, int onCompletionCallbackId);
+    native long createNativeVideoComponent(String url, int onCompletionCallbackId);
+    native long createNativeVideoComponent(byte[] video, int onCompletionCallbackId);
+    native long createNativeVideoComponentNSData(long video, int onCompletionCallbackId);
 
     native void startVideoComponent(long peer); 
     
@@ -266,7 +274,7 @@ public final class IOSNative {
     native long openConnection(String url, int timeout);
     native void connect(long peer);
     native void setMethod(long peer, String mtd);
-    
+    native void setChunkedStreamingMode(long peer, int len);
     native int getResponseCode(long peer);
 
     native String getResponseMessage(long peer);
@@ -279,12 +287,15 @@ public final class IOSNative {
 
     native void addHeader(long peer, String key, String value);
 
-    native void setBody(long peer, byte[] arr);    
+    native void setBody(long peer, byte[] arr);  
+    
+    native void setBody(long peer, String file);
     
     native void closeConnection(long peer);
     
     native String getUDID();
     native String getOSVersion();
+    native String getDeviceName();
     
     // location manager
     native long createCLLocation();
@@ -298,9 +309,13 @@ public final class IOSNative {
     native double getLocationVelocity(long location);
     native long getLocationTimeStamp(long location);
 
-    native void startUpdatingLocation(long clLocation);
+    native void startUpdatingLocation(long clLocation, int priority);
     native void stopUpdatingLocation(long clLocation);
+    native void startUpdatingBackgroundLocation(long clLocation);
+    native void stopUpdatingBackgroundLocation(long clLocation);
     
+    native void addGeofencing(long clLocation, double lat, double lng, double radius, long expiration, String id);
+    native void removeGeofencing(long clLocation, String id);
     
     // capture
     native void captureCamera(boolean movie);
@@ -400,8 +415,8 @@ public final class IOSNative {
 
     native String getUserAgentString();
     
-    native void openDatePicker(int type, long time, int x, int y, int w, int h);
-    native void openStringPicker(String[] stringArray, int selection, int x, int y, int w, int h);
+    native void openDatePicker(int type, long time, int x, int y, int w, int h, int preferredWidth, int preferredHeight);
+    native void openStringPicker(String[] stringArray, int selection, int x, int y, int w, int h, int preferredWidth, int preferredHeight);
 
     native void socialShare(String text, long imagePeer, Rectangle sourceRect);
     
@@ -468,6 +483,13 @@ public final class IOSNative {
             float d0, float d1, float d2, float d3,
             int originX, int originY
     );
+    native void nativeSetTransformMutable( 
+            float a0, float a1, float a2, float a3, 
+            float b0, float b1, float b2, float b3,
+            float c0, float c1, float c2, float c3,
+            float d0, float d1, float d2, float d3,
+            int originX, int originY
+    );
     
     
     native boolean nativeIsTransformSupportedGlobal();
@@ -478,7 +500,9 @@ public final class IOSNative {
     
     native void drawTextureAlphaMask(long textureId, int color, int alpha, int x, int y, int w, int h);
     
-    
+    native void nativeFillShapeMutable(int color, int alpha, int commandsLen, byte[] commandsArr, int pointsLen, float[] pointsArr); 
+
+    native void nativeDrawShapeMutable(int color, int alpha, int commandsLen, byte[] commandsArr, int pointsLen, float[] pointsArr, float lineWidth, int capStyle, int joinStyle, float miterLimit);
     
     // End paths
 
@@ -498,4 +522,100 @@ public final class IOSNative {
     
     native void clearNativeCookies();
 
+    native void splitString(String source, char separator, ArrayList<String> out) ;
+
+    native void readFile(long nsFileHandle, byte[] b, int off, int len);
+
+    native int getNSFileOffset(long nsFileHandle);
+
+    native int getNSFileAvailable(long nsFileHandle);
+
+    native int getNSFileSize(long nsFileHandle);
+
+    native long createNSFileHandle(String name, String type);
+
+    native long createNSFileHandle(String file);
+
+    native void setNSFileOffset(long nsFileHandle, int off);
+
+    /**
+     * Reads a single byte from filehandle.
+     * @param nsFileHandle
+     * @return 
+     */
+    native int readNSFile(long nsFileHandle);
+
+    public native boolean isGoogleLoggedIn();
+
+    public native void googleLogin(Object callback);
+
+    public native String getGoogleToken();
+
+    public native void googleLogout();
+
+    public native void inviteFriends(String appLinkUrl, String previewImageUrl);
+    
+    native void sendLocalNotification(String id, String alertTitle, String alertBody, String alertSound, int badgeNumber, long fireDate, int repeatType);
+
+    native void cancelLocalNotification(String id);
+
+    native long gausianBlurImage(long peer, float radius);
+    
+    /**
+     * Removes an observer from NSNotificationCenter
+     * @param nsObserverPeer The opaque Objective-C class that is being used as the observer.
+     */
+    native void removeNotificationCenterObserver(long nsObserverPeer);
+
+    /**
+     * This one simply hides the native editing component, but doesn't fold the 
+     * keyboard or remove the component.  It is used to bridge the gap in async
+     * edit mode between when the user clicks "next" and when the next 
+     * editing component is ready.
+     * @param b 
+     */
+    native void setNativeEditingComponentVisible(boolean b) ;
+
+    native void setNativeClippingMutable(int commandsLen, byte[] commandsArr, int pointsLen, float[] pointsArr);
+
+    native void refreshContacts();
+
+    native void translatePoints(int pointSize, float tX, float tY, float tX0, float[] in, int srcPos, float[] out, int destPos, int numPoints);
+
+    native void scalePoints(int pointSize, float sX, float sY, float sZ, float[] in, int srcPos, float[] out, int destPos, int numPoints);
+
+    native void updateNativeEditorText(String text);
+
+    native void fireUIBackgroundFetchResultNoData();
+
+    native void fireUIBackgroundFetchResultNewData();
+
+    native void fireUIBackgroundFetchResultFailed();
+
+    native void setPreferredBackgroundFetchInterval(int seconds);
+
+    native boolean isBackgroundFetchSupported();
+
+    native int countLinkedContacts(int recId);
+
+    native void getLinkedContactIds(int num, int recId, int[] out);
+
+    native void fillRadialGradientMutable(int startColor, int endColor, int x, int y, int width, int height, int startAngle, int arcAngle);
+
+    native void applyRadialGradientPaintMutable(int startColor, int endColor, int x, int y, int width, int height);
+
+    native void clearRadialGradientPaintMutable();
+
+    native void applyRadialGradientPaintGlobal(int startColor, int endColor, int x, int y, int width, int height);
+
+    native void clearRadialGradientPaintGlobal();
+
+    native void clearRectMutable(int x, int y, int width, int height);
+
+    native void nativeClearRectGlobal(int x, int y, int width, int height);
+
+    native void blockCopyPaste(boolean blockCopyPaste);
+
+
+   
 }

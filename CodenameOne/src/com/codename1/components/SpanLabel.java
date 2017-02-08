@@ -22,25 +22,26 @@
  */
 package com.codename1.components;
 
-import com.codename1.ui.Button;
 import com.codename1.ui.Container;
 import com.codename1.ui.Image;
 import com.codename1.ui.Label;
 import com.codename1.ui.TextArea;
-import com.codename1.ui.events.ActionListener;
 import com.codename1.ui.layouts.BorderLayout;
 import com.codename1.ui.layouts.FlowLayout;
 import com.codename1.ui.plaf.Style;
 
 /**
- * A multi line label component that can be easily localized, this is simply based
- * on a text area combined with a label.
+ * <p>A multi line label component that can be easily localized, this is simply based
+ * on a text area combined with a label.</p>
+ * <script src="https://gist.github.com/codenameone/55b73c621fea0263638a.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-spanlabel.png" alt="SpanLabel Sample" />
  *
  * @author Shai Almog
  */
 public class SpanLabel extends Container {
     private Label icon;
     private TextArea text;
+    private boolean shouldLocalize = true;
     
     /**
      * Default constructor will be useful when adding this to the GUI builder
@@ -49,6 +50,15 @@ public class SpanLabel extends Container {
         this("");
     }
     
+    /**
+     * Constructor accepting default text and uiid for the text
+     * @param txt the text
+     * @param textUiid the new text UIID
+     */
+    public SpanLabel(String txt, String textUiid) {
+        this(txt);
+        text.setUIID(textUiid);
+    }
     
     /**
      * Constructor accepting default text
@@ -57,6 +67,8 @@ public class SpanLabel extends Container {
         setUIID("Container");
         setLayout(new BorderLayout());
         text = new TextArea(getUIManager().localize(txt, txt));
+        text.setActAsLabel(true);
+        text.setColumns(text.getText().length() + 1);
         text.setUIID("Label");
         text.setEditable(false);
         text.setFocusable(false);
@@ -80,6 +92,14 @@ public class SpanLabel extends Container {
      */
     public String getTextUIID() {
         return text.getUIID();
+    }
+    
+    /**
+     * Returns the Style proxy object for the text of this span button.
+     * @return The Style object for the text of this span button.
+     */
+    public Style getTextAllStyles() {
+        return text.getAllStyles();
     }
     
     /**
@@ -135,7 +155,11 @@ public class SpanLabel extends Container {
      * @param t text of the label
      */
     public void setText(String t) {
-        text.setText(getUIManager().localize(t, t));
+        if(shouldLocalize) {
+            text.setText(getUIManager().localize(t, t));
+        } else {
+            text.setText(t);
+        }
     }
 
     /**
@@ -231,7 +255,7 @@ public class SpanLabel extends Container {
     
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyNames() {
         return new String[] {
@@ -240,7 +264,7 @@ public class SpanLabel extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Class[] getPropertyTypes() {
        return new Class[] {
@@ -253,14 +277,14 @@ public class SpanLabel extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyTypeNames() {
         return new String[] {"String", "Image", "String", "String", "String"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Object getPropertyValue(String name) {
         if(name.equals("text")) {
@@ -282,7 +306,7 @@ public class SpanLabel extends Container {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String setPropertyValue(String name, Object value) {
         if(name.equals("text")) {
@@ -306,5 +330,25 @@ public class SpanLabel extends Container {
             return null;
         }
         return super.setPropertyValue(name, value);
+    }
+
+    /**
+     * Indicates if text should be localized when set to the component, by default
+     * all text is localized so this allows disabling automatic localization for 
+     * a specific component.
+     * @return the shouldLocalize value
+     */
+    public boolean isShouldLocalize() {
+        return shouldLocalize;
+    }
+
+    /**
+     * Indicates if text should be localized when set to the component, by default
+     * all text is localized so this allows disabling automatic localization for 
+     * a specific component.
+     * @param shouldLocalize the shouldLocalize to set
+     */
+    public void setShouldLocalize(boolean shouldLocalize) {
+        this.shouldLocalize = shouldLocalize;
     }
 }

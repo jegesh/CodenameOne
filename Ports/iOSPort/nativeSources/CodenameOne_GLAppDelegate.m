@@ -30,6 +30,9 @@
 int mallocWhileSuspended = 0;
 #endif
 
+
+int pendingRemoteNotificationRegistrations = 0;
+
 BOOL isAppSuspended = NO;
 //GL_APP_DELEGATE_IMPORT
 //GL_APP_DELEGATE_INCLUDE
@@ -37,6 +40,19 @@ BOOL isAppSuspended = NO;
 extern UIView *editingComponent;
 
 #define INCLUDE_CN1_PUSH
+
+#ifdef INCLUDE_GOOGLE_CONNECT
+#ifdef GOOGLE_CONNECT_PODS
+#import <GooglePlus/GooglePlus.h>
+#else
+#import "GooglePlus.h"
+#endif
+#endif
+
+#ifdef INCLUDE_FACEBOOK_CONNECT
+#import "FBSDKCoreKit.h"
+#endif
+
 
 @implementation CodenameOne_GLAppDelegate
 
@@ -64,9 +80,30 @@ extern UIView *editingComponent;
         com_codename1_ui_Display_setProperty___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG o, key, value);
     }
     com_codename1_impl_ios_IOSImplementation_callback__(CN1_THREAD_GET_STATE_PASS_SINGLE_ARG);
+    
+    if (launchOptions[UIApplicationLaunchOptionsLocalNotificationKey]) {
+        NSLog(@"Background notification received");
+        UILocalNotification *notification = launchOptions[UIApplicationLaunchOptionsLocalNotificationKey];
+        com_codename1_impl_ios_IOSImplementation_localNotificationReceived___java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG [notification.userInfo valueForKey:@"__ios_id__"]));
+        application.applicationIconBadgeNumber = 0;
+    }
+    
+    id locationValue = [launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey];
+    if (locationValue) {
+        com_codename1_impl_ios_IOSImplementation_appDidLaunchWithLocation__(CN1_THREAD_GET_STATE_PASS_SINGLE_ARG);
+    }
+    
+#ifdef INCLUDE_CN1_BACKGROUND_FETCH
+    [application setMinimumBackgroundFetchInterval:UIApplicationBackgroundFetchIntervalMinimum];
+#endif
+    
 #ifdef INCLUDE_CN1_PUSH
-    [[UIApplication sharedApplication] cancelAllLocalNotifications];
+    //[[UIApplication sharedApplication] cancelAllLocalNotifications]; // <-- WHY IS THIS HERE? -- removing it for now
     [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+    if(launchOptions == nil) {
+        //afterDidFinishLaunchingWithOptionsMarkerEntry
+        return YES;
+    }
     NSDictionary* userInfo = [launchOptions valueForKey:@"UIApplicationLaunchOptionsRemoteNotificationKey"];
     if(userInfo == nil) {
         //afterDidFinishLaunchingWithOptionsMarkerEntry
@@ -78,33 +115,71 @@ extern UIView *editingComponent;
         return YES;
     }
     NSLog(@"Received notification on start: %@", userInfo);
+    BOOL pushIncludedBody = NO;
     if( [[userInfo valueForKey:@"aps"] valueForKey:@"alert"] != NULL)
     {
-        NSString* alertValue = [[userInfo valueForKey:@"aps"] valueForKey:@"alert"];
-        com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), nil);
+        pushIncludedBody = YES;
+        id alertValue0 = [[userInfo valueForKey:@"aps"] valueForKey:@"alert"];
+        NSString *alertValue = nil;
+        if ([alertValue0 isKindOfClass:[NSDictionary class]]) {
+            NSDictionary *alertValueD = (NSDictionary*)alertValue0;
+            if ([alertValueD valueForKey:@"title"] != NULL && [alertValueD valueForKey:@"body"] != NULL) {
+                alertValue = [NSString stringWithFormat:@"%@;%@", [alertValueD valueForKey:@"title"], [alertValueD valueForKey:@"body"]];
+                com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"4"));
+            } else {
+                NSLog(@"Received push type 4 but missing either title or body");
+            }
+            
+        } else {
+            alertValue = (NSString*)alertValue0;
+            // Find out the push type
+            NSString *pushType = @"1";
+            if ([userInfo valueForKey:@"meta"] != NULL) {
+                // If there was a meta argument, then this is a type 3 push
+                com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"3"));
+            } else {
+                // If there was no meta argument, then this is a type 1
+                com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"1"));
+            }
+        }
     }
     if( [userInfo valueForKey:@"meta"] != NULL)
     {
         NSString* alertValue = [userInfo valueForKey:@"meta"];
-        com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"2"));
+        if (pushIncludedBody) {
+            // If the push included a body, then this is a type 3 push (we don't need to set type here because it was set when the body was sent to the push callback)
+            com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), nil);
+        } else {
+            // If the push did not include a body, then it is a type 2 push
+            com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"2"));
+        }
     }
 #endif
 
     //afterDidFinishLaunchingWithOptionsMarkerEntry
+    
+#ifdef INCLUDE_FACEBOOK_CONNECT
+    return [[FBSDKApplicationDelegate sharedInstance] application:application
+                                    didFinishLaunchingWithOptions:launchOptions];
+#else
     return YES;
+#endif
 }
 
 // implemented this way so this will compile on older versions of xcode
 - (void)application:(UIApplication *)application didRegisterUserNotificationSettings:(id)notificationSettings {
-    Class uiApp = NSClassFromString(@"UIApplication");
-    UIApplication* uiAppInstance = [UIApplication sharedApplication];
-    SEL sel = NSSelectorFromString(@"registerForRemoteNotifications");
-    //[[UIApplication sharedApplication] registerForRemoteNotifications];
-    NSMethodSignature *signature = [uiAppInstance methodSignatureForSelector:sel];
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-    invocation.selector = sel;
-    invocation.target = uiApp;
-    [invocation invokeWithTarget:uiAppInstance];
+    if (pendingRemoteNotificationRegistrations > 0) {
+        pendingRemoteNotificationRegistrations--;
+        Class uiApp = NSClassFromString(@"UIApplication");
+        UIApplication* uiAppInstance = [UIApplication sharedApplication];
+        SEL sel = NSSelectorFromString(@"registerForRemoteNotifications");
+        //[[UIApplication sharedApplication] registerForRemoteNotifications];
+        NSMethodSignature *signature = [uiAppInstance methodSignatureForSelector:sel];
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+        invocation.selector = sel;
+        invocation.target = uiApp;
+        [invocation invokeWithTarget:uiAppInstance];
+    }
 }
 
 // required for URL opening
@@ -130,12 +205,36 @@ extern UIView *editingComponent;
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
     JAVA_OBJECT str1 = fromNSString(CN1_THREAD_GET_STATE_PASS_ARG [url absoluteString]);
     JAVA_OBJECT str2 = fromNSString(CN1_THREAD_GET_STATE_PASS_ARG sourceApplication);
+    
+#ifdef INCLUDE_GOOGLE_CONNECT
+    
+    // Handle Google Plus Login
+    BOOL res = [GPPURLHandler handleURL:url
+           sourceApplication:sourceApplication
+                  annotation:annotation];
+    if (res) {
+        return res;
+    }
+    
+#endif
+#ifdef INCLUDE_FACEBOOK_CONNECT
+    BOOL fbRes = [[FBSDKApplicationDelegate sharedInstance] application:application
+                                                          openURL:url
+                                                sourceApplication:sourceApplication
+                                                       annotation:annotation];
+    if (fbRes) {
+        return fbRes;
+    }
+#endif
+    
+    //openURLMarkerEntry
+    
 #ifdef NEW_CODENAME_ONE_VM
     JAVA_BOOLEAN b = com_codename1_impl_ios_IOSImplementation_shouldApplicationHandleURL___java_lang_String_java_lang_String_R_boolean(CN1_THREAD_GET_STATE_PASS_ARG str1, str2);
 #else
     JAVA_BOOLEAN b = com_codename1_impl_ios_IOSImplementation_shouldApplicationHandleURL___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG str1, str2);
 #endif
-    //FACEBOOK_URL_BIND
+
     return b;
 }
 
@@ -188,8 +287,7 @@ extern UIView *editingComponent;
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
 #ifdef INCLUDE_CN1_PUSH
-    [[UIApplication sharedApplication] cancelAllLocalNotifications];
-    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+     [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
 #endif
     /*
      Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
@@ -203,6 +301,15 @@ extern UIView *editingComponent;
 {
     com_codename1_impl_ios_IOSImplementation_applicationWillTerminate__(CN1_THREAD_GET_STATE_PASS_SINGLE_ARG);
 }
+
+#ifdef INCLUDE_CN1_BACKGROUND_FETCH
+typedef void (^CN1BackgroundFetchBlockType)(UIBackgroundFetchResult);
+CN1BackgroundFetchBlockType cn1UIBackgroundFetchResultCompletionHandler = 0;
+-(void)application:(UIApplication *)application performFetchWithCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler{
+    cn1UIBackgroundFetchResultCompletionHandler = Block_copy(completionHandler);
+    com_codename1_impl_ios_IOSImplementation_performBackgroundFetch__(CN1_THREAD_GET_STATE_PASS_SINGLE_ARG);
+}
+#endif
 
 #ifdef INCLUDE_CN1_PUSH
 - (void)application:(UIApplication*)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData*)deviceToken {
@@ -220,6 +327,52 @@ extern UIView *editingComponent;
 
 - (void)application:(UIApplication*)application didReceiveRemoteNotification:(NSDictionary*)userInfo {
     NSLog(@"Received notification while running: %@", userInfo);
+    
+    NSDictionary *apsInfo = [userInfo objectForKey:@"aps"];
+    if(apsInfo == nil) {
+        //afterDidFinishLaunchingWithOptionsMarkerEntry
+        return;
+    }
+    BOOL pushIncludedBody = NO;
+    if( [[userInfo valueForKey:@"aps"] valueForKey:@"alert"] != NULL)
+    {
+        pushIncludedBody = YES;
+        id alertValue0 = [[userInfo valueForKey:@"aps"] valueForKey:@"alert"];
+        NSString *alertValue = nil;
+        if ([alertValue0 isKindOfClass:[NSDictionary class]]) {
+            NSDictionary *alertValueD = (NSDictionary*)alertValue0;
+            if ([alertValueD valueForKey:@"title"] != NULL && [alertValueD valueForKey:@"body"] != NULL) {
+                alertValue = [NSString stringWithFormat:@"%@;%@", [alertValueD valueForKey:@"title"], [alertValueD valueForKey:@"body"]];
+                com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"4"));
+            } else {
+                NSLog(@"Received push type 4 but missing either title or body");
+            }
+            
+        } else {
+            alertValue = (NSString*)alertValue0;
+            // Find out the push type
+            NSString *pushType = @"1";
+            if ([userInfo valueForKey:@"meta"] != NULL) {
+                // If there was a meta argument, then this is a type 3 push
+                com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"3"));
+            } else {
+                // If there was no meta argument, then this is a type 1
+                com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"1"));
+            }
+        }
+    }
+    if( [userInfo valueForKey:@"meta"] != NULL)
+    {
+        NSString* alertValue = [userInfo valueForKey:@"meta"];
+        if (pushIncludedBody) {
+            // If the push included a body, then this is a type 3 push (we don't need to set type here because it was set when the body was sent to the push callback)
+            com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), nil);
+        } else {
+            // If the push did not include a body, then it is a type 2 push
+            com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"2"));
+        }
+    }
+    /*
     if( [[userInfo valueForKey:@"aps"] valueForKey:@"alert"] != NULL)
     {
 	NSString* alertValue = [[userInfo valueForKey:@"aps"] valueForKey:@"alert"];
@@ -229,7 +382,7 @@ extern UIView *editingComponent;
     {
         NSString* alertValue = [userInfo valueForKey:@"meta"];
         com_codename1_impl_ios_IOSImplementation_pushReceived___java_lang_String_java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue), fromNSString(CN1_THREAD_GET_STATE_PASS_ARG @"2"));
-    }
+    }*/
 }
 #endif
 
@@ -237,6 +390,15 @@ extern void repaintUI();
 
 -(void)application:(UIApplication*)application didChangeStatusBarFrame:(CGRect)oldStatusBarFrame {
     repaintUI();
+}
+
+- (void)application:(UIApplication*)application didReceiveLocalNotification:(UILocalNotification*)notification {
+    NSLog(@"Received local notification while running: %@", notification);
+    if( [notification.userInfo valueForKey:@"__ios_id__"] != NULL)
+    {
+        NSString* alertValue = [notification.userInfo valueForKey:@"__ios_id__"];
+        com_codename1_impl_ios_IOSImplementation_localNotificationReceived___java_lang_String(CN1_THREAD_GET_STATE_PASS_ARG fromNSString(CN1_THREAD_GET_STATE_PASS_ARG alertValue));
+    }
 }
 
 #ifndef CN1_USE_ARC

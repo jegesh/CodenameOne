@@ -27,20 +27,34 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Vector;
 
 /**
- * A multipart post request allows a developer to submit large binary data 
- * files to the server in a post request
+ * <p>A multipart post request allows a developer to submit large binary data 
+ * files to the server in a multipart mime post request. This is a standard method
+ * for large binary file uploads to webservers and data services. <br>
+ * The sample code below includes both the client code using the upload capabilities as
+ * well as a simple sample servlet that can accept multipart data:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/9cad1248365512416101.js"></script>
+ * 
+ * <p>
+ * The sample code below demonstrates uploading to the 
+ * <a href="https://www.filestack.com/features-upload" target="_blank">filestack.com</a> API.</p>
+ * 
+ * <script src="https://gist.github.com/codenameone/7f6e07dadbdd169648ed.js"></script>
  *
  * @author Shai Almog
  */
 public class MultipartRequest extends ConnectionRequest {
     private String boundary;
-    private Hashtable args = new Hashtable();
+    private LinkedHashMap args = new LinkedHashMap();
     private Hashtable filenames = new Hashtable();
     private Hashtable filesizes = new Hashtable();
     private Hashtable mimeTypes = new Hashtable();
@@ -149,7 +163,7 @@ public class MultipartRequest extends ConnectionRequest {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void addArgumentNoEncoding(String key, String value) {
         args.put(key, value);
@@ -160,7 +174,31 @@ public class MultipartRequest extends ConnectionRequest {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
+     */
+    @Override
+    public void addArgumentNoEncoding(String key, String[] value) {
+        addArgument(key, value);
+        ignoreEncoding.add(key);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addArgumentNoEncodingArray(String key, String... value) {
+        addArgumentNoEncoding(key, (String[])value);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void addArgument(String name, String[] value) {
+        args.put(name, value);
+    }
+    
+    /**
+     * {@inheritDoc}
      */
     public void addArgument(String name, String value) {
         args.put(name, value);
@@ -171,7 +209,7 @@ public class MultipartRequest extends ConnectionRequest {
 
     protected long calculateContentLength() {
         long length = 0L;
-        Enumeration e = args.keys();
+        Iterator e = args.keySet().iterator();
         
         long dLength = "Content-Disposition: form-data; name=\"\"; filename=\"\"".length() + 2; // 2 = CRLF
         long ctLength = "Content-Type: ".length() + 2; // 2 = CRLF
@@ -182,23 +220,43 @@ public class MultipartRequest extends ConnectionRequest {
         ctLength = "Content-Type: text/plain; charset=UTF-8".length() + 4; // 4 = 2 * CRLF
         long baseTextLength = dLength + ctLength + bLength + 2;  // 2 = CRLF at end of part
         
-        while(e.hasMoreElements()) {
-                String key = (String)e.nextElement();
+        while(e.hasNext()) {
+                String key = (String)e.next();
             Object value = args.get(key);
             if(value instanceof String) {
                 length += baseTextLength;
                 length += key.length();
                 if(ignoreEncoding.contains(key)) {
-                    length += ((String)value).length(); 
+                    try {
+                        length += value.toString().getBytes("UTF-8").length;
+                    } catch (UnsupportedEncodingException ex) {
+                        length += value.toString().getBytes().length;
+                    }
                 } else {
                     length += Util.encodeBody((String)value).length();
                 }
             } else {
-                length += baseBinaryLength;
-                length += key.length();
-                length += ((String)filenames.get(key)).length();
-                length += ((String)mimeTypes.get(key)).length();
-                length += Long.parseLong((String)filesizes.get(key));
+                if(value instanceof String[]) {
+                    for(String s : (String[])value) {
+                        length += baseTextLength;
+                        length += key.length();
+                        if(ignoreEncoding.contains(key)) {
+                            try {
+                                length += s.toString().getBytes("UTF-8").length;
+                            } catch (UnsupportedEncodingException ex) {
+                                length += value.toString().getBytes().length;
+                            }
+                        } else {
+                            length += Util.encodeBody(s).length();
+                        }
+                    }
+                } else {
+                    length += baseBinaryLength;
+                    length += key.length();
+                    length += ((String)filenames.get(key)).length();
+                    length += ((String)mimeTypes.get(key)).length();
+                    length += Long.parseLong((String)filesizes.get(key));
+                }
             }
         }
         length += bLength + 2; // same as part boundaries, suffixed with: --
@@ -206,17 +264,17 @@ public class MultipartRequest extends ConnectionRequest {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void buildRequestBody(OutputStream os) throws IOException {
         Writer writer = null;
         writer = new OutputStreamWriter(os, "UTF-8"); 
-        Enumeration e = args.keys();
-        while(e.hasMoreElements()) {
-        	if (shouldStop()) {
-        		break;
-        	}
-            String key = (String)e.nextElement();
+        Iterator e = args.keySet().iterator();
+        while(e.hasNext()) {
+            if (shouldStop()) {
+                    break;
+            }
+            String key = (String)e.next();
             Object value = args.get(key);
             
             writer.write("--");
@@ -242,44 +300,76 @@ public class MultipartRequest extends ConnectionRequest {
                 if(canFlushStream){
                     writer.flush();
                 }
-            } else {
-                writer.write("Content-Disposition: form-data; name=\"" + key + "\"; filename=\"" + filenames.get(key) +"\"");
-                writer.write(CRLF);
-                writer.write("Content-Type: ");
-                writer.write((String)mimeTypes.get(key));
-                writer.write(CRLF);
-                writer.write("Content-Transfer-Encoding: binary");
-                writer.write(CRLF);
-                writer.write(CRLF);
-                if(canFlushStream){
-                    writer.flush();
-                }
-                InputStream i;
-                if (value instanceof InputStream) {
-                	i = (InputStream)value;
-                } else {
-                	i = new ByteArrayInputStream((byte[])value);
-                }
-                byte[] buffer = new byte[8192];
-                int s = i.read(buffer);
-                while(s > -1) {
-                	if (shouldStop()) {
-                		break;
-                	}
-                	os.write(buffer, 0, s);
+            } else { 
+                if(value instanceof String[]) {
+                    boolean first = true;
+                    for(String s : (String[])value) {
+                        if(!first) {
+                            writer.write(CRLF);
+                            writer.write("--");
+                            writer.write(boundary);
+                            writer.write(CRLF);                            
+                        }
+                        first = false;
+                        writer.write("Content-Disposition: form-data; name=\"");
+                        writer.write(key);
+                        writer.write("\"");
+                        writer.write(CRLF);
+                        writer.write("Content-Type: text/plain; charset=UTF-8");
+                        writer.write(CRLF);
+                        writer.write(CRLF);
+                        if(canFlushStream){
+                            writer.flush();
+                        }                
+                        if(ignoreEncoding.contains(key)) {
+                            writer.write(s);
+                        } else {
+                            writer.write(Util.encodeBody(s));
+                        }
+                        //writer.write(CRLF);
                         if(canFlushStream){
                             writer.flush();
                         }
-                	s = i.read(buffer);
-                }
-                // (when passed by stream, leave for caller to clean up).
-                if (!(value instanceof InputStream)) {
-                	Util.cleanup(i);
-                }
-                args.remove(key);
-                value = null;
-                if(canFlushStream){
-                    writer.flush();
+                    }
+                } else { 
+                    writer.write("Content-Disposition: form-data; name=\"" + key + "\"; filename=\"" + filenames.get(key) +"\"");
+                    writer.write(CRLF);
+                    writer.write("Content-Type: ");
+                    writer.write((String)mimeTypes.get(key));
+                    writer.write(CRLF);
+                    writer.write("Content-Transfer-Encoding: binary");
+                    writer.write(CRLF);
+                    writer.write(CRLF);
+                    if(canFlushStream){
+                        writer.flush();
+                    }
+                    InputStream i;
+                    if (value instanceof InputStream) {
+                            i = (InputStream)value;
+                    } else {
+                            i = new ByteArrayInputStream((byte[])value);
+                    }
+                    byte[] buffer = new byte[8192];
+                    int s = i.read(buffer);
+                    while(s > -1) {
+                            if (shouldStop()) {
+                                    break;
+                            }
+                            os.write(buffer, 0, s);
+                            if(canFlushStream){
+                                writer.flush();
+                            }
+                            s = i.read(buffer);
+                    }
+                    // (when passed by stream, leave for caller to clean up).
+                    if (!(value instanceof InputStream)) {
+                            Util.cleanup(i);
+                    }
+                    //args.remove(key);
+                    value = null;
+                    if(canFlushStream){
+                        writer.flush();
+                    }
                 }
             }
             writer.write(CRLF);

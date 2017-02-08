@@ -25,6 +25,7 @@ package com.codename1.ui.spinner;
 
 import com.codename1.io.Util;
 import com.codename1.l10n.L10NManager;
+import com.codename1.l10n.SimpleDateFormat;
 import com.codename1.ui.Button;
 import com.codename1.ui.Command;
 import com.codename1.ui.Component;
@@ -38,9 +39,17 @@ import java.util.Calendar;
 import java.util.Date;
 
 /**
- * The picker is a component and API that allows either poping up a spinner or
+ * <p>{@code Picker} is a component and API that allows either popping up a spinner or
  * using the native picker API when applicable. This is quite important for some
- * platforms where the native spinner behavior is very hard to replicate.
+ * platforms where the native spinner behavior is very hard to replicate.</p>
+ * 
+ * <script src="https://gist.github.com/codenameone/5e437d82812dfcbdf092.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-picker.png" alt="Picker UI" />
+ * <img src="https://www.codenameone.com/img/developer-guide/components-picker-date-time-on-simulator.png" alt="Date And Time Picker On the simulator" />
+ * <img src="https://www.codenameone.com/img/developer-guide/components-picker-date-android.png" alt="Android native date picker" />
+ * <img src="https://www.codenameone.com/img/developer-guide/components-picker-strings-android.png" alt="Android native String picker" />
+ * <img src="https://www.codenameone.com/img/developer-guide/components-picker-time-android.png" alt="Android native time picker" />
+ * 
  *
  * @author Shai Almog
  */
@@ -49,7 +58,10 @@ public class Picker extends Button {
     private Object value = new Date();
     private boolean showMeridiem;
     private Object metaData;
-    private Object renderingPrototype;
+    private Object renderingPrototype = "XXXXXXXXXXXXXX";
+    private SimpleDateFormat formatter;
+    private int preferredPopupWidth;
+    private int preferredPopupHeight;
     
     /**
      * Default constructor
@@ -78,9 +90,10 @@ public class Picker extends Button {
                                 gs.setRenderingPrototype((String)renderingPrototype);
                             }
                             String[] strArr = (String[])metaData;
-                            gs.setModel(new DefaultListModel(strArr));
+                            gs.setModel(new DefaultListModel((Object[])strArr));
                             if(value != null) {
-                                for(int iter = 0 ; iter < strArr.length ; iter++) {
+                                int slen = strArr.length;
+                                for(int iter = 0 ; iter < slen ; iter++) {
                                     if(strArr[iter].equals(value)) {
                                         gs.getModel().setSelectedIndex(iter);
                                         break;
@@ -92,7 +105,11 @@ public class Picker extends Button {
                             break;
                         case Display.PICKER_TYPE_DATE:
                             DateSpinner ds = new DateSpinner();
-                            cld.setTime((Date)value);
+                            if(value == null) {
+                                cld.setTime(new Date());
+                            } else {
+                                cld.setTime((Date)value);
+                            }
                             ds.setStartYear(1900);
                             ds.setCurrentDay(cld.get(Calendar.DAY_OF_MONTH));
                             ds.setCurrentMonth(cld.get(Calendar.MONTH) + 1);
@@ -117,8 +134,18 @@ public class Picker extends Button {
                             }
                             ts.setCurrentMinute(minute);
                             showDialog(pickerDlg, ts);
-                            if(isShowMeridiem() && ts.isCurrentMeridiem()) {
-                                hour = ts.getCurrentHour() + 12;
+                            if(isShowMeridiem()) {
+                                int offset = 0;
+                                if(ts.getCurrentHour() == 12) {
+                                    if(!ts.isCurrentMeridiem()) {
+                                        offset = 12;
+                                    }
+                                } else {
+                                    if(ts.isCurrentMeridiem()) {
+                                        offset = 12;
+                                    }
+                                }
+                                hour = ts.getCurrentHour() + offset;
                             } else {
                                 hour = ts.getCurrentHour();
                             }
@@ -230,11 +257,16 @@ public class Picker extends Button {
     }
     
     /**
-     * Sets the string entries for the string picker
+     * <p>Sets the string entries for the string picker. <br>
+     * sample usage for this method below:</p>
+     * 
+     * <script src="https://gist.github.com/codenameone/47602e679f61712693bd.js"></script>
      * @param strs string array
      */
-    public void setStrings(String[] strs) {
-        for (int i = 0; i < strs.length; i++) {
+    public void setStrings(String... strs) {
+        this.type = Display.PICKER_TYPE_STRINGS;
+        int slen = strs.length;
+        for (int i = 0; i < slen; i++) {
             String str = strs[i];
             strs[i] = getUIManager().localize(str, str);
         }
@@ -280,6 +312,12 @@ public class Picker extends Button {
             setText("...");
             return;
         }
+        
+        if(getFormatter() != null) {
+            setText(formatter.format(value));
+            return;
+        }
+        
         switch(type) {
             case Display.PICKER_TYPE_STRINGS:
                 value = getUIManager().localize(value.toString(), value.toString());
@@ -299,7 +337,7 @@ public class Picker extends Button {
                     } else {
                         text = "am";
                     }
-                    setText(twoDigits(hour % 13 + 1) + ":" + twoDigits(minute) + text);
+                    setText(twoDigits(hour <= 12 ? hour : hour - 12) + ":" + twoDigits(minute) + text);
                 } else {
                     setText(twoDigits(hour) + ":" + twoDigits(minute));
                 }
@@ -371,4 +409,109 @@ public class Picker extends Button {
     public void setRenderingPrototype(Object renderingPrototype) {
         this.renderingPrototype = renderingPrototype;
     }
+
+    /**
+     * Allows us to define a date format for the display of dates/times
+     * @return the defined formatter
+     */
+    public SimpleDateFormat getFormatter() {
+        return formatter;
+    }
+
+    /**
+     * Allows us to define a date format for the display of dates/times
+     * 
+     * @param formatter the new formatter
+     */
+    public void setFormatter(SimpleDateFormat formatter) {
+        this.formatter = formatter;
+        updateValue();
+    }
+    
+    /**
+     * The preferred width of the popup dialog for the picker.  This will only 
+     * be used on devices where the popup width and height are configurable, such 
+     * as the iPad or tablets.  On iPhone, the picker always spans the width of the 
+     * screen along the bottom.
+     * @param width The preferred width of the popup.
+     */
+    public void setPreferredPopupWidth(int width) {
+        this.preferredPopupWidth = width;
+    }
+    
+    /**
+     * The preferred height of the popup dialog for the picker.  This will only 
+     * be used on devices where the popup width and height are configurable, such 
+     * as the iPad or tablets.  On iPhone, the picker always spans the width of the 
+     * screen along the bottom.
+     * @param height The preferred height of the popup.
+     */
+    public void setPreferredPopupHeight(int height) {
+        this.preferredPopupHeight = height;
+    }
+    
+    /**
+     * The preferred width of the popup dialog. This will only 
+     * be used on devices where the popup width and height are configurable, such 
+     * as the iPad or tablets.  On iPhone, the picker always spans the width of the 
+     * screen along the bottom. 
+     * @return 
+     */
+    public int getPreferredPopupWidth() {
+        return preferredPopupWidth;
+    }
+    
+    /**
+     * The preferred height of the popup dialog.  This will only 
+     * be used on devices where the popup width and height are configurable, such 
+     * as the iPad or tablets.  On iPhone, the picker always spans the width of the 
+     * screen along the bottom.
+     * @return 
+     */
+    public int getPreferredPopupHeight() {
+        return preferredPopupHeight;
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public String[] getPropertyNames() {
+        return new String[] {"Strings"};
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Class[] getPropertyTypes() {
+       return new Class[] { String[].class };
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public String[] getPropertyTypeNames() {
+        return new String[] {"String []"};
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Object getPropertyValue(String name) {
+        if(name.equals("Strings")) {
+            return getStrings();
+        }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public String setPropertyValue(String name, Object value) {
+        if(name.equals("Strings")) {
+            setStrings((String[])value);
+            return null;
+        }
+        return super.setPropertyValue(name, value);
+    }
+    
 }

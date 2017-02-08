@@ -24,6 +24,7 @@
 package com.codename1.facebook;
 
 import com.codename1.components.SliderBridge;
+import com.codename1.io.AccessToken;
 import com.codename1.io.ConnectionRequest;
 import com.codename1.io.NetworkEvent;
 import com.codename1.io.NetworkManager;
@@ -58,7 +59,7 @@ import java.util.Vector;
 public class FaceBookAccess {
 
     private static String clientId = "132970916828080";
-    private static String redirectURI = "http://www.codenameone.com/";
+    private static String redirectURI = "https://www.codenameone.com/";
     private static String clientSecret = "6aaf4c8ea791f08ea15735eb647becfe";
     private static String[] permissions = new String[]{"public_profile", "email", "user_friends"};
     private static FaceBookAccess instance = new FaceBookAccess();
@@ -81,10 +82,11 @@ public class FaceBookAccess {
         return instance;
     }
 
-    private Oauth2 createOAuth() {
+    public Oauth2 createOAuth() {
         String scope = "";
         if (permissions != null && permissions.length > 0) {
-            for (int i = 0; i < permissions.length; i++) {
+            int plen = permissions.length;
+            for (int i = 0; i < plen; i++) {
                 String permission = permissions[i];
                 scope += permission + ",";
             }
@@ -126,8 +128,6 @@ public class FaceBookAccess {
      * 
      * @param al a listener that will receive at its source either a token for 
      * the service or an exception in case of a failure
-     * @return a component that should be displayed to the user in order to 
-     * perform the authentication
      */
     public void showAuthentication(final ActionListener al) {
         createOAuth().showAuthentication(new ActionListener() {
@@ -135,6 +135,11 @@ public class FaceBookAccess {
             public void actionPerformed(ActionEvent evt) {
                 if(evt.getSource() instanceof String){
                     token = (String) evt.getSource();
+                }
+                if(evt.getSource() instanceof AccessToken){
+                    AccessToken t = (AccessToken) evt.getSource();
+                    token = t.getToken();
+                    
                 }
                 al.actionPerformed(evt);
             }
@@ -725,7 +730,6 @@ public class FaceBookAccess {
      * @param targetList the list that should be updated when the data arrives
      * @param targetOffset the offset within the list to insert the image
      * @param targetKey the key for the hashtable in the target offset
-     * @param cacheId a unique identifier to be used to store the image into storage
      * @param toScale the scale of the image to put in the List or null
      * @param tempStorage if true place the image in a temp storage
      */
@@ -847,14 +851,15 @@ public class FaceBookAccess {
             return null;
         }
         Hashtable[] h = new Hashtable[photoCount];
-        for(int iter = 0 ; iter < h.length ; iter++) {
+        int hlen = h.length;
+        for(int iter = 0 ; iter < hlen ; iter++) {
             h[iter] = new Hashtable();
             h[iter].put("photo", placeholder);
             if(iter < 30) {
                 h[iter].put("fetching", Boolean.TRUE);
             }
         }
-        DefaultListModel dl = new DefaultListModel(h) {
+        DefaultListModel dl = new DefaultListModel((Object[])h) {
             public Object getItem(int offset) {
                 Hashtable hash = (Hashtable)super.getItemAt(offset);
                 if(!hash.containsKey("fetching")) {
@@ -1160,14 +1165,16 @@ public class FaceBookAccess {
 
         final FacebookRESTService con = new FacebookRESTService(token, "https://api.facebook.com/method/users.getInfo", false);
         String ids = usersIds[0];
-        for (int i = 1; i < usersIds.length; i++) {
+        int ulen = usersIds.length;
+        for (int i = 1; i < ulen; i++) {
             ids += "," + usersIds[i];
 
         }
         con.addArgumentNoEncoding("uids", ids);
 
         String fieldsStr = fields[0];
-        for (int i = 1; i < fields.length; i++) {
+        int flen = fields.length;
+        for (int i = 1; i < flen; i++) {
             fieldsStr += "," + fields[i];
 
         }
@@ -1273,7 +1280,8 @@ public class FaceBookAccess {
      */
     public void cleanTempStorage() {
         String[] entries = Storage.getInstance().listEntries();
-        for (int i = 0; i < entries.length; i++) {
+        int elen = entries.length;
+        for (int i = 0; i < elen; i++) {
             String key = entries[i];
             if (key.startsWith(TEMP_STORAGE)) {
                 Storage.getInstance().deleteStorageFile(key);
@@ -1327,6 +1335,14 @@ public class FaceBookAccess {
      */
     public static void setToken(String tok){
         token = tok;
+    }
+
+    /**
+     * Returns the Facebook authorization token that can be used for API access
+     * @return the token
+     */
+    public static String getToken() {
+        return token;
     }
     
     /**

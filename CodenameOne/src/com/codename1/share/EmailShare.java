@@ -46,11 +46,21 @@ public class EmailShare extends ShareService {
      * Default Constructor
      */
     public EmailShare() {
-        super("Email", Resources.getSystemResource().getImage("mail.png"));
+        super("Email", null);
+    }
+    
+    @Override
+    public Image getIcon() {
+        Image i = super.getIcon();
+        if(i == null) {
+            i = Resources.getSystemResource().getImage("mail.png");
+            setIcon(i);
+        }
+        return i;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void share(final String toShare, final String image, final String mimeType) {
         final Form currentForm = Display.getInstance().getCurrent();
@@ -136,7 +146,7 @@ public class EmailShare extends ShareService {
     
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void share(final String toShare) {
         share(toShare, null, null);
@@ -159,7 +169,7 @@ public class EmailShare extends ShareService {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean canShareImage() {
         return true;

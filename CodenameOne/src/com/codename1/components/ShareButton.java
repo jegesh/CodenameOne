@@ -30,6 +30,7 @@ import com.codename1.ui.Button;
 import com.codename1.ui.Command;
 import com.codename1.ui.Dialog;
 import com.codename1.ui.Display;
+import com.codename1.ui.FontImage;
 import com.codename1.ui.Image;
 import com.codename1.ui.List;
 import com.codename1.ui.events.ActionEvent;
@@ -40,11 +41,20 @@ import com.codename1.ui.util.Resources;
 import java.util.Vector;
 
 /**
- * This is a share button.
- * The share button is responsible to share the required info with the available 
- * sharing services
+ * <p>The share button allows sharing a String or an image either thru the defined 
+ * sharing services or thru the native OS sharing support. On Android &amp; iOS the native 
+ * sharing API is invoked for this class.<br>
+ * The code below demonstrates image sharing, notice that an image must be stored using
+ * the {@link com.codename1.io.FileSystemStorage} API and shouldn't use a different API
+ * like {@link com.codename1.io.Storage}!</p>
  * 
- * @author Chen
+ * <script src="https://gist.github.com/codenameone/6bf5e68b329ae59a25e3.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-sharebutton.png" alt="Share on the simulator" />
+ * 
+ * <h4>Notice that share looks different on a device</h4>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-sharebutton-android.png" alt="Share on the device" />
+ * 
+ * @author Chen Fishbein
  */
 public class ShareButton extends Button implements ActionListener{
     
@@ -61,8 +71,9 @@ public class ShareButton extends Button implements ActionListener{
      */
     public ShareButton() {
         setUIID("ShareButton");
-        Image shareIcon = Resources.getSystemResource().getImage("share.png");
-        setIcon(shareIcon);
+        //Image shareIcon =  Resources.getSystemResource().getImage("share.png");
+        //setIcon(shareIcon);
+        FontImage.setMaterialIcon(this, FontImage.MATERIAL_SHARE);
         addActionListener(this);
         shareServices.addElement(new SMSShare());
         shareServices.addElement(new EmailShare());
@@ -121,64 +132,70 @@ public class ShareButton extends Button implements ActionListener{
      * @param evt 
      */
     public void actionPerformed(ActionEvent evt) {
-        if(Display.getInstance().isNativeShareSupported()){
-            Display.getInstance().share(textToShare, imageToShare, imageMimeType, new Rectangle(
-                    ShareButton.this.getAbsoluteX(),
-                    ShareButton.this.getAbsoluteY(),
-                    ShareButton.this.getWidth(),
-                    ShareButton.this.getHeight()
-            ));                
-            return;
-        }
-        Vector sharing;
-        if(imageToShare != null){
-            sharing = new Vector();
-            for (int i = 0; i < shareServices.size(); i++) {
-                ShareService share = (ShareService) shareServices.elementAt(i);
-                if(share.canShareImage()){
-                    sharing.add(share);
+        // postpone the share button action to the next EDT cycle to allow action listeners on the button to 
+        // process first
+        Display.getInstance().callSerially(new Runnable() {
+            public void run() {
+                if(Display.getInstance().isNativeShareSupported()){
+                    Display.getInstance().share(textToShare, imageToShare, imageMimeType, new Rectangle(
+                            ShareButton.this.getAbsoluteX(),
+                            ShareButton.this.getAbsoluteY(),
+                            ShareButton.this.getWidth(),
+                            ShareButton.this.getHeight()
+                    ));                
+                    return;
                 }
-            }
-        }else{
-            sharing = shareServices;
-        }
-        for (int i = 0; i < sharing.size(); i++) {
-            ShareService share = (ShareService) sharing.elementAt(i);
-            share.setMessage(textToShare);
-            share.setImage(imageToShare, imageMimeType);
-            share.setOriginalForm(getComponentForm());
-        }
-        List l = new List(sharing);
-        l.setCommandList(true);
-        final Dialog dialog = new Dialog("Share");
-        dialog.setLayout(new BorderLayout());
-        dialog.addComponent(BorderLayout.CENTER, l);
-        dialog.placeButtonCommands(new Command[]{new Command("Cancel")});
-        l.addActionListener(new ActionListener() {
+                Vector sharing;
+                if(imageToShare != null){
+                    sharing = new Vector();
+                    for (int i = 0; i < shareServices.size(); i++) {
+                        ShareService share = (ShareService) shareServices.elementAt(i);
+                        if(share.canShareImage()){
+                            sharing.add(share);
+                        }
+                    }
+                }else{
+                    sharing = shareServices;
+                }
+                for (int i = 0; i < sharing.size(); i++) {
+                    ShareService share = (ShareService) sharing.elementAt(i);
+                    share.setMessage(textToShare);
+                    share.setImage(imageToShare, imageMimeType);
+                    share.setOriginalForm(getComponentForm());
+                }
+                List l = new List(sharing);
+                l.setCommandList(true);
+                final Dialog dialog = new Dialog("Share");
+                dialog.setLayout(new BorderLayout());
+                dialog.addComponent(BorderLayout.CENTER, l);
+                dialog.placeButtonCommands(new Command[]{new Command("Cancel")});
+                l.addActionListener(new ActionListener() {
 
-            public void actionPerformed(ActionEvent evt) {
-                dialog.dispose();
+                    public void actionPerformed(ActionEvent evt) {
+                        dialog.dispose();
+                    }
+                });
+                dialog.show();
             }
         });
-        dialog.show();
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyNames() {
         return new String[]{"textToShare"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Class[] getPropertyTypes() {
         return new Class[]{String.class};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Object getPropertyValue(String name) {
         if (name.equals("textToShare")) {
@@ -188,7 +205,7 @@ public class ShareButton extends Button implements ActionListener{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String setPropertyValue(String name, Object value) {
         if (name.equals("textToShare")) {

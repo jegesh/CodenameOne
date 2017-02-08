@@ -28,8 +28,9 @@ import com.codename1.io.ConnectionRequest;
 import com.codename1.io.JSONParseCallback;
 import com.codename1.io.JSONParser;
 import com.codename1.io.NetworkEvent;
-import com.codename1.io.services.ImageDownloadService;
+import com.codename1.io.Util;
 import com.codename1.ui.list.DefaultListModel;
+import com.codename1.util.StringUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -100,6 +101,15 @@ class FacebookRESTService extends ConnectionRequest implements JSONParseCallback
     }
 
     protected void setQuery(String query) {
+        if (query.indexOf("?") > 0) {
+            String search = query.substring(query.indexOf("?")+1);
+            query = query.substring(0, query.indexOf("?"));
+            java.util.List<String> parts = StringUtil.tokenize(search, "&");
+            for (String part : parts) {
+                java.util.List<String> kv = StringUtil.tokenize(part, "=");
+                addArgumentNoEncoding(kv.get(0), kv.size()>1 ?kv.get(1):"");
+            }
+        }
         String url = GRAPH_URL + query;
         if(FaceBookAccess.getApiVersion().length() > 0){
             url = GRAPH_URL + FaceBookAccess.getApiVersion() + "/" + query;
@@ -122,6 +132,7 @@ class FacebookRESTService extends ConnectionRequest implements JSONParseCallback
         i.setYield(-1);
         InputStreamReader reader = new InputStreamReader(i, "UTF-8");
         JSONParser.parse(reader, this);
+        Util.cleanup(reader);
         if(stack.size() > 0){
             fireResponseListener(new NetworkEvent(this, stack.elementAt(0)));
         }
@@ -303,7 +314,7 @@ class FacebookRESTService extends ConnectionRequest implements JSONParseCallback
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void longToken(long tok) {
     }

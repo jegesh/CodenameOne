@@ -22,13 +22,18 @@
  */
 package com.codename1.contacts;
 
+import com.codename1.ui.Display;
 import com.codename1.ui.Image;
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Vector;
 
 /**
- * This class represents a Contact information from the device Address Book
+ * <p>Represents a Contact entry from the device Address Book.<br>
+ * The sample below demonstrates listing all the contacts within the device with their photos</p>
+ * 
+ * <script src="https://gist.github.com/codenameone/15f39e1eef77f6059aff.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/contacts-with-photos.png" alt="Contacts with the default photos on the simulator, on device these will use actual user photos when available" />
  * 
  * @author Chen
  */
@@ -60,6 +65,8 @@ public class Contact {
     
     private String [] urls;
     
+    private String[] linkedIds;
+    
     /**
      * Empty Constructor
      */
@@ -89,9 +96,24 @@ public class Contact {
      * @return Display Name
      */
     public String getDisplayName() {
+        if (displayName == null || "".equals(displayName)) {
+            if (familyName != null && firstName != null) {
+                displayName =  firstName + " " + familyName;
+            } else if (getPrimaryPhoneNumber() != null) {
+                displayName = getPrimaryPhoneNumber();
+            } else if (getPrimaryEmail() != null) {
+                displayName = getPrimaryEmail();
+            } else if (getFirstName() != null) {
+                displayName = getFirstName();
+            } else if (getFamilyName() != null) {
+                displayName = getFamilyName();
+            } else {
+                displayName = id;
+            }
+        }
         return displayName;
     }
-
+        
     /**
      * Gets the Contact Emails, the Hashtable contains key/value pairs where
      * the key is a String which represents the type of the Email, types can
@@ -160,7 +182,7 @@ public class Contact {
      * @return the Contact primary email or null if not declared
      */
     public String getPrimaryEmail() {
-        if(primaryEmail == null) {
+        if(primaryEmail == null && emails != null) {
             Collection c = emails.values();
             if(c.size() > 0) {
                 return (String)c.iterator().next();
@@ -175,6 +197,12 @@ public class Contact {
      * @return the Contact primary phone number or null if not declared
      */
     public String getPrimaryPhoneNumber() {
+        if(primaryPhoneNumber == null && phoneNumbers != null) {
+            Collection c = phoneNumbers.values();
+            if(c.size() > 0) {
+                return (String)c.iterator().next();
+            }
+        }
         return primaryPhoneNumber;
     }
 
@@ -298,4 +326,22 @@ public class Contact {
         this.urls = urls;
     }
     
+    /**
+     * Returns all of the contacts that are linked to this contact.
+     * @return The contacts that are linked to this contact.
+     */
+    //public Contact[] getLinkedContacts() {
+    //    return ContactsManager.getLinkedContacts(this);
+    //}
+    
+    /**
+     * Returns the IDs of all contacts that are linked to this contact.
+     * @return IDs of all contacts that are linked to this contact.
+     */
+    public String[] getLinkedContactIds() {
+        if (linkedIds == null) {
+            linkedIds = Display.getInstance().getLinkedContactIds(this);
+        }
+        return linkedIds;
+    }
 }

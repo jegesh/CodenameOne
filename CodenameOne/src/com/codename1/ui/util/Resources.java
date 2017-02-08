@@ -32,6 +32,7 @@ import com.codename1.ui.animations.AnimationObject;
 import com.codename1.ui.animations.Timeline;
 import com.codename1.ui.geom.Dimension;
 import com.codename1.ui.plaf.Border;
+import com.codename1.ui.plaf.RoundBorder;
 import com.codename1.ui.plaf.Style;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -76,6 +77,17 @@ public class Resources {
     static final byte MAGIC_PASSWORD = (byte)0xFE;
 
     /**
+     * This variable is used by new GUI builder apps to keep track of the applications resources
+     */
+    private static Resources globalResources;
+    
+    /**
+     * This variable is used to cache the system resources file CN1Resource.res
+     */
+    private static Resources systemResource;
+    
+    
+    /**
      * @return the failOnMissingTruetype
      */
     public static boolean isFailOnMissingTruetype() {
@@ -117,6 +129,7 @@ public class Resources {
     static final int BORDER_TYPE_INSET = 17;
     static final int BORDER_TYPE_OUTSET = 18;
     static final int BORDER_TYPE_IMAGE_SCALED = 19;
+    static final int BORDER_TYPE_IMAGE_ROUND = 20;
 
     // for use by the resource editor
     private static Class classLoader = Resources.class;
@@ -129,6 +142,7 @@ public class Resources {
      */
     private static Object cachedResource;
     private static String lastLoadedName;
+    private static int lastLoadedDPI;
 
     private static boolean runtimeMultiImages;
     
@@ -188,7 +202,8 @@ public class Resources {
         int width = input.readInt();
         int height = input.readInt();
         AnimationObject[] animations = new AnimationObject[input.readShort()];
-        for(int iter = 0 ; iter < animations.length ; iter++) {
+        int alen = animations.length;
+        for(int iter = 0 ; iter < alen ; iter++) {
             String name = input.readUTF();
             int startTime = input.readInt();
             int animDuration = input.readInt();
@@ -268,7 +283,8 @@ public class Resources {
             if(password) {
                 magic = (byte)decode(magic & 0xff);
                 char[] chars = id.toCharArray();
-                for(int i = 0 ; i < chars.length ; i++) {
+                int clen = chars.length;
+                for(int i = 0 ; i < clen ; i++) {
                     chars[i] = (char)decode(chars[i] & 0xffff);
                 }
                 id = new String(chars);
@@ -374,7 +390,8 @@ public class Resources {
         minorVersion = input.readShort();
         
         metaData = new String[input.readShort()];
-        for(int iter = 0 ; iter < metaData.length ; iter++) {
+        int mlen = metaData.length;
+        for(int iter = 0 ; iter < mlen ; iter++) {
             metaData[iter] = input.readUTF();
         }
     }
@@ -418,7 +435,8 @@ public class Resources {
     public String[] getResourceNames() {
         String[] arr = new String[resourceTypes.size()];
         Iterator<String> e = resourceTypes.keySet().iterator();
-        for(int iter = 0 ; iter < arr.length ; iter++) {
+        int alen = arr.length;
+        for(int iter = 0 ; iter < alen ; iter++) {
             arr[iter] = (String)e.next();
         }
         return arr;
@@ -541,7 +559,8 @@ public class Resources {
 
     private static String[] toStringArray(ArrayList<String> v) {
         String[] s = new String[v.size()];
-        for(int iter = 0 ; iter < s.length ; iter++) {
+        int slen = v.size();
+        for(int iter = 0 ; iter < slen ; iter++) {
             s[iter] = (String)v.get(iter);
         }
         return s;
@@ -683,7 +702,8 @@ public class Resources {
         Resources r = open(resource + ".res", dpi);
         
         String[] over = Display.getInstance().getPlatformOverrides();
-        for(int iter = 0 ; iter < over.length ; iter++) {
+        int olen = over.length;
+        for(int iter = 0 ; iter < olen ; iter++) {
             InputStream i = Display.getInstance().getResourceAsStream(classLoader, resource + "_" + over[iter] + ".ovr");
             if(i != null) {
                 r.override(i);
@@ -704,7 +724,10 @@ public class Resources {
      */
     public static Resources open(String resource, int dpi) throws IOException {
         try {
-            if(lastLoadedName != null && lastLoadedName.equals(resource)) {
+            if (resource.equals(Resources.systemResourceLocation) && systemResource != null) {
+                return systemResource;
+            }
+            if(lastLoadedName != null && lastLoadedName.equals(resource) && lastLoadedDPI == dpi) {
                 Resources r = (Resources)Display.getInstance().extractHardRef(cachedResource);
                 if(r != null) {
                     return r;
@@ -716,12 +739,13 @@ public class Resources {
             }
             Resources r = new Resources(is, dpi);
             is.close();
-            //no need to cache the system resource it is very small and we rather 
-            //keep the app resource in the cache 
+            
             if(resource.equals(Resources.systemResourceLocation)){
+                systemResource = r;
                 return r;
             }
             
+            lastLoadedDPI = dpi;
             lastLoadedName = resource;
             cachedResource = Display.getInstance().createSoftWeakRef(r);
             return r;
@@ -865,12 +889,6 @@ public class Resources {
                 // been loaded yet when the border was created
                 if(key.endsWith("order")) {
                     Border b = confirmBorder(h, key);
-                    if(majorVersion == 0 && minorVersion == 0) {
-                        b.setPressedInstance(confirmBorder(h, key + "Pressed"));
-                        b.setFocusedInstance(confirmBorder(h, key + "Focused"));
-                        h.remove(key + "Pressed");
-                        h.remove(key + "Focused");
-                    }
                     h.put(key, b);
                 }
             }
@@ -909,14 +927,16 @@ public class Resources {
         }
         if(value[0].equals("s")) {
             Image[] images = new Image[value.length - 1];
-            for(int iter = 0 ; iter < images.length ; iter++) {
+            int ilen = images.length;
+            for(int iter = 0 ; iter < ilen ; iter++) {
                 images[iter] = getImage(value[iter + 1]);
             }
            return Border.createImageScaledBorder(images[0], images[1], images[2],
                images[3], images[4], images[5], images[6], images[7], images[8]); 
         }
         Image[] images = new Image[value.length];
-        for(int iter = 0 ; iter < value.length ; iter++) {
+        int vlen = value.length;
+        for(int iter = 0 ; iter < vlen ; iter++) {
             images[iter] = getImage(value[iter]);
         }
         switch(images.length) {
@@ -1226,9 +1246,12 @@ public class Resources {
         }
         if(!failOnMissingTruetype) {
             try {
-                return Font.createTrueTypeFont(fontName, fileName).derive(fontSize, f.getStyle());
-            } catch(Exception err) {
-                err.printStackTrace();
+                Font ttf = Font.createTrueTypeFont(fontName, fileName);
+                if (ttf != null) {
+                    return ttf.derive(fontSize, f.getStyle());
+                }
+                return f;
+            } catch (Exception ex) {
                 return f;
             }
         }
@@ -1266,6 +1289,11 @@ public class Resources {
                 theme.put(key, "" + (input.readByte() & 0xff));
                 continue;
             } 
+            
+            if(key.endsWith("opacity")) {
+                theme.put(key, "" + (input.readInt() & 0xff));
+                continue;
+            } 
 
             // if this is a padding or margin then we will have the 4 values as bytes
             if(key.endsWith("adding") || key.endsWith("argin")) {
@@ -1289,22 +1317,9 @@ public class Resources {
 
             // border
             if(key.endsWith("order")) {
-                if(majorVersion == 0 && minorVersion == 0) {
-                    theme.put(key, createBorder(input, newerVersion));
-
-                    if(newerVersion) {
-                        if(input.readBoolean()) {
-                            theme.put(key + "Pressed", createBorder(input, true));
-                        }
-                        if(input.readBoolean()) {
-                            theme.put(key + "Focused", createBorder(input, true));
-                        }
-                    }
-                } else {
-                    int borderType = input.readShort() & 0xffff;
-                    Object b = createBorder(input, borderType);
-                    theme.put(key, b);
-                }
+                int borderType = input.readShort() & 0xffff;
+                Object b = createBorder(input, borderType);
+                theme.put(key, b);
                 continue;
             }
 
@@ -1538,67 +1553,22 @@ public class Resources {
             // scaled Image border
             case 0xff11:
                 return readScaledImageBorder(input);
-        }
-        return null;
-    }
 
-    private Object createBorder(DataInputStream input, boolean newerVersion) throws IOException {
-        int type = input.readByte();
-        switch(type) {
-            case BORDER_TYPE_EMPTY:
-                return Border.getEmpty();
-            case BORDER_TYPE_LINE:
-                // use theme colors?
-                if(input.readBoolean()) {
-                    return Border.createLineBorder(input.readByte());
-                } else {
-                    return Border.createLineBorder(input.readByte(), input.readInt());
-                }
-            case BORDER_TYPE_ROUNDED:
-                // use theme colors?
-                if(input.readBoolean()) {
-                    return Border.createRoundBorder(input.readByte(), input.readByte());
-                } else {
-                    return Border.createRoundBorder(input.readByte(), input.readByte(), input.readInt());
-                }
-            case BORDER_TYPE_ETCHED_LOWERED:
-                // use theme colors?
-                if(input.readBoolean()) {
-                    return Border.createEtchedLowered();
-                } else {
-                    return Border.createEtchedLowered(input.readInt(), input.readInt());
-                }
-            case BORDER_TYPE_ETCHED_RAISED:
-                // use theme colors?
-                if(input.readBoolean()) {
-                    return Border.createEtchedRaised();
-                } else {
-                    return Border.createEtchedRaised(input.readInt(), input.readInt());
-                }
-            case BORDER_TYPE_BEVEL_RAISED:
-                // use theme colors?
-                if(input.readBoolean()) {
-                    return Border.createBevelRaised();
-                } else {
-                    return Border.createBevelRaised(input.readInt(), input.readInt(), input.readInt(), input.readInt());
-                }
-            case BORDER_TYPE_BEVEL_LOWERED:
-                // use theme colors?
-                if(input.readBoolean()) {
-                    return Border.createBevelLowered();
-                } else {
-                    return Border.createBevelLowered(input.readInt(), input.readInt(), input.readInt(), input.readInt());
-                }
-            case BORDER_TYPE_IMAGE:
-            case BORDER_TYPE_IMAGE_SCALED:
-                Object[] imageBorder = readImageBorder(input);
-                
-                if(!newerVersion) {
-                    // legacy issue...
-                    input.readBoolean();
-                }
-                
-                return imageBorder;
+            // round border
+            case 0xff12:                    
+                    return RoundBorder.create().
+                            rectangle(input.readBoolean()).
+                            color(input.readInt()).
+                            opacity(input.readInt()).
+                            stroke(input.readFloat(), input.readBoolean()).
+                            strokeColor(input.readInt()).
+                            strokeOpacity(input.readInt()).
+                            shadowBlur(input.readFloat()).
+                            shadowOpacity(input.readInt()).
+                            shadowSpread(input.readInt(), input.readBoolean()).
+                            shadowX(input.readFloat()).
+                            shadowY(input.readFloat());
+                            
         }
         return null;
     }
@@ -1664,7 +1634,8 @@ public class Resources {
             size = 256;
         }
         int[] palette = new int[size];
-        for(int iter = 0 ; iter < palette.length ; iter++) {
+        int plen = palette.length;
+        for(int iter = 0 ; iter < plen ; iter++) {
             palette[iter] = input.readInt();
         }
         int width = input.readShort();
@@ -1686,5 +1657,23 @@ public class Resources {
             ex.printStackTrace();
         }
         return null;
+    }
+    
+    /**
+     * Global resources are used by new GUI builder apps to keep track of the applications resources
+     * 
+     * @param res the resource object used by default in the GUI builder forms
+     */
+    public static void setGlobalResources(Resources res) {
+        globalResources = res;
+    }
+    
+    /**
+     * Global resources are used by new GUI builder apps to keep track of the applications resources
+     * 
+     * @return the resource object used by default in the GUI builder forms
+     */
+    public static Resources getGlobalResources() {
+        return globalResources;
     }
 }

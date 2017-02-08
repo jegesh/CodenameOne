@@ -51,6 +51,7 @@ import com.codename1.ui.plaf.Style;
 import com.codename1.designer.ResourceEditorApp;
 import com.codename1.impl.javase.JavaSEPortWithSVGSupport;
 import com.codename1.ui.Form;
+import com.codename1.ui.plaf.RoundBorder;
 import com.codename1.ui.util.xml.Data;
 import com.codename1.ui.util.xml.Entry;
 import com.codename1.ui.util.xml.L10n;
@@ -108,7 +109,7 @@ import javax.xml.bind.JAXBException;
  * @author Shai Almog
  */
 public class EditableResources extends Resources implements TreeModel {
-    private static final short MINOR_VERSION = 6;
+    private static final short MINOR_VERSION = 7;
     private static final short MAJOR_VERSION = 1;
 
     private boolean modified;
@@ -535,8 +536,10 @@ public class EditableResources extends Resources implements TreeModel {
                                 for(Lang l : d.getLang()) {
                                     Hashtable<String, String> language = new Hashtable<String, String>();
                                     
-                                    for(Entry e : l.getEntry()) {
-                                        language.put(e.getKey(), e.getValue());
+                                    if(l != null && l.getEntry() != null) {
+                                        for(Entry e : l.getEntry()) {
+                                            language.put(e.getKey(), e.getValue());
+                                        }
                                     }
                                     
                                     l10n.put(l.getName(), language);
@@ -577,6 +580,22 @@ public class EditableResources extends Resources implements TreeModel {
                                     for(com.codename1.ui.util.xml.Border b : d.getBorder()) {
                                         if("empty".equals(b.getType())) {
                                             theme.put(b.getKey(), Border.createEmpty());
+                                            continue;
+                                        }
+
+                                        if("round".equals(b.getType())) {
+                                            RoundBorder rb = RoundBorder.create();
+                                            rb = rb.color(b.getRoundBorderColor());
+                                            rb = rb.rectangle(b.isRectangle());
+                                            rb = rb.shadowBlur(b.getShadowBlur());
+                                            rb = rb.shadowOpacity(b.getShadowOpacity());
+                                            rb = rb.shadowSpread(b.getShadowSpread(), b.isShadowMM());
+                                            rb = rb.shadowX(b.getShadowX());
+                                            rb = rb.shadowY(b.getShadowY());
+                                            rb = rb.stroke(b.getStrokeThickness(), b.isStrokeMM());
+                                            rb = rb.strokeColor(b.getStrokeColor());
+                                            rb = rb.strokeOpacity(b.getStrokeOpacity());
+                                            theme.put(b.getKey(), rb);
                                             continue;
                                         }
 
@@ -679,7 +698,12 @@ public class EditableResources extends Resources implements TreeModel {
                                     for(com.codename1.ui.util.xml.Font b : d.getFont()) {
                                         if("ttf".equals(b.getType())) {
                                             com.codename1.ui.Font system = com.codename1.ui.Font.createSystemFont(b.getFace().intValue(), b.getStyle().intValue(), b.getSize().intValue());
-                                            EditorTTFFont t = new EditorTTFFont(new File(f.getParentFile(), b.getName()), b.getSizeSettings().intValue(), b.getActualSize().floatValue(), system);
+                                            EditorTTFFont t;
+                                            if(b.getName().startsWith("native:")) {
+                                                t = new EditorTTFFont(b.getName(), b.getSizeSettings().intValue(), b.getActualSize().floatValue(), system);
+                                            } else {
+                                                t = new EditorTTFFont(new File(f.getParentFile(), b.getName()), b.getSizeSettings().intValue(), b.getActualSize().floatValue(), system);
+                                            }
                                             theme.put(b.getKey(), t);
                                             continue;
                                         }
@@ -1003,6 +1027,11 @@ public class EditableResources extends Resources implements TreeModel {
                             if(key.endsWith("transparency")) {
                                 bw.write("        <val key=\"" + key + "\" value=\"" + theme.get(key) + "\" />\n");
                                 continue;
+                            }
+                            
+                            if(key.endsWith("opacity")) {
+                                bw.write("        <val key=\"" + key + "\" value=\"" + theme.get(key) + "\" />\n");
+                                continue;
                             } 
 
                             // if this is a padding or margin then we will have the 4 values as bytes
@@ -1020,6 +1049,25 @@ public class EditableResources extends Resources implements TreeModel {
 
                             if(key.endsWith("border")) {                                
                                 Border border = (Border)theme.get(key);
+                                if(border instanceof RoundBorder) {
+                                    RoundBorder rb = (RoundBorder)border;
+                                    bw.write("        <border key=\"" + key + "\" type=\"round\" "
+                                            + "roundBorderColor=\"" + rb.getColor()+ "\" " 
+                                            + "opacity=\"" + rb.getOpacity() + "\" " 
+                                            + "strokeColor=\"" + rb.getStrokeColor()+ "\" " 
+                                            + "strokeOpacity=\"" + rb.getStrokeOpacity()+ "\" " 
+                                            + "strokeThickness=\"" + rb.getStrokeThickness()+ "\" " 
+                                            + "strokeMM=\"" + rb.isStrokeMM()+ "\" " 
+                                            + "shadowSpread=\"" + rb.getShadowSpread()+ "\" " 
+                                            + "shadowOpacity=\"" + rb.getShadowOpacity()+ "\" " 
+                                            + "shadowX=\"" + rb.getShadowX()+ "\" " 
+                                            + "shadowY=\"" + rb.getShadowY()+ "\" " 
+                                            + "shadowBlur=\"" + rb.getShadowBlur()+ "\" " 
+                                            + "shadowMM=\"" + rb.isShadowMM()+ "\" " 
+                                            + "rectangle=\"" + rb.isRectangle()+ "\" />\n");
+                            
+                                    continue;
+                                }
                                 int type = Accessor.getType(border);
                                 switch(type) {
                                     case BORDER_TYPE_EMPTY:
@@ -1182,14 +1230,23 @@ public class EditableResources extends Resources implements TreeModel {
                                     bw.write("        <font key=\"" + key + "\" type=\"named\" "
                                             + "name=\"" + findId(f) + "\" />\n");
                                 } else {
-                                    if(f instanceof EditorTTFFont && ((EditorTTFFont)f).getFontFile() != null) {
+                                    if(f instanceof EditorTTFFont && (((EditorTTFFont)f).getFontFile() != null || ((EditorTTFFont)f).getNativeFontName() != null)) {
                                         EditorTTFFont ed = (EditorTTFFont)f;
+                                        String fname;
+                                        String ffName;
+                                        if(((EditorTTFFont)f).getNativeFontName() != null) {
+                                            fname = ((EditorTTFFont)f).getNativeFontName();
+                                            ffName = fname;
+                                        } else {
+                                            fname = ed.getFontFile().getName();
+                                            ffName = ((java.awt.Font)ed.getNativeFont()).getPSName();
+                                        }
                                         bw.write("        <font key=\"" + key + "\" type=\"ttf\" "
                                                 + "face=\"" + f.getFace() + "\" "
                                                 + "style=\"" + f.getStyle() + "\" "
                                                 + "size=\"" + f.getSize() + "\" "
-                                                + "name=\"" + ed.getFontFile().getName() + "\" "
-                                                + "family=\"" + ((java.awt.Font)ed.getNativeFont()).getPSName()+ "\" "
+                                                + "name=\"" + fname + "\" "
+                                                + "family=\"" + ffName+ "\" "
                                                 + "sizeSettings=\"" + ed.getSizeSetting() + "\" "
                                                 + "actualSize=\"" + ed.getActualSize() + "\" />\n");
                                     } else {
@@ -1785,8 +1842,11 @@ public class EditableResources extends Resources implements TreeModel {
     
     com.codename1.ui.Font createTrueTypeFont(com.codename1.ui.Font f, String fontName, String fileName, float fontSize, int sizeSetting) {
         // workaround for NPE in case of people doing stupid things like moving the res file.
-        if(ResourceEditorView.getLoadedFile() == null) {
+        if(ResourceEditorView.getLoadedFile() == null && !fileName.startsWith("native:")) {
             return f;
+        }
+        if(fileName.startsWith("native:")) {
+            return new EditorTTFFont(fileName, sizeSetting, fontSize, f);            
         }
         File fontFile = new File(ResourceEditorView.getLoadedFile().getParentFile(), fileName);
         if(fontFile.exists()) {
@@ -1828,6 +1888,11 @@ public class EditableResources extends Resources implements TreeModel {
                 output.writeByte(Integer.parseInt((String)theme.get(key)));
                 continue;
             } 
+            
+            if (key.endsWith("opacity")) {
+                output.writeInt(Integer.parseInt((String)theme.get(key)));
+                continue;
+            }
 
             // if this is a padding or margin then we will have the 4 values as bytes
             if(key.endsWith("padding") || key.endsWith("margin")) {
@@ -1867,11 +1932,16 @@ public class EditableResources extends Resources implements TreeModel {
                     output.writeByte(f.getFace());
                     output.writeByte(f.getStyle());
                     output.writeByte(f.getSize());
-                    if(f instanceof EditorTTFFont && ((EditorTTFFont)f).getFontFile() != null) {
+                    if(f instanceof EditorTTFFont && (((EditorTTFFont)f).getFontFile() != null || ((EditorTTFFont)f).getNativeFontName() != null)) {
                         output.writeBoolean(true);
                         EditorTTFFont ed = (EditorTTFFont)f;
-                        output.writeUTF(ed.getFontFile().getName());
-                        output.writeUTF(((java.awt.Font)ed.getNativeFont()).getPSName());
+                        if(ed.getNativeFontName() != null) {
+                            output.writeUTF(ed.getNativeFontName());
+                            output.writeUTF(ed.getNativeFontName());
+                        } else {
+                            output.writeUTF(ed.getFontFile().getName());
+                            output.writeUTF(((java.awt.Font)ed.getNativeFont()).getPSName());
+                        }
                         output.writeInt(ed.getSizeSetting());
                         output.writeFloat(ed.getActualSize());
                     } else {
@@ -1923,6 +1993,24 @@ public class EditableResources extends Resources implements TreeModel {
     }
     
     private void writeBorder(DataOutputStream output, Border border, boolean newVersion) throws IOException {
+        if(border instanceof RoundBorder) {
+            output.writeShort(0xff12);
+            RoundBorder rb = (RoundBorder)border;
+            output.writeBoolean(rb.isRectangle());
+            output.writeInt(rb.getColor());
+            output.writeInt(rb.getOpacity());
+            output.writeFloat(rb.getStrokeThickness());
+            output.writeBoolean(rb.isStrokeMM());
+            output.writeInt(rb.getStrokeColor());
+            output.writeInt(rb.getStrokeOpacity());
+            output.writeFloat(rb.getShadowBlur());
+            output.writeInt(rb.getShadowOpacity());
+            output.writeInt(rb.getShadowSpread());
+            output.writeBoolean(rb.isShadowMM());
+            output.writeFloat(rb.getShadowX());
+            output.writeFloat(rb.getShadowY());
+            return;
+        }
         int type = Accessor.getType(border);
         switch(type) {
             case BORDER_TYPE_EMPTY:

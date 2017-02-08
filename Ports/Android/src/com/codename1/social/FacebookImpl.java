@@ -22,34 +22,26 @@
  */
 package com.codename1.social;
 
-import static android.R.attr.description;
-import static android.R.attr.name;
-import static android.R.id.message;
 import android.content.Intent;
-import android.os.Bundle;
-import com.codename1.facebook.FaceBookAccess;
 import com.codename1.impl.android.AndroidNativeUtil;
-import com.codename1.impl.android.AndroidImplementation;
 import com.codename1.impl.android.CodenameOneActivity;
 import com.codename1.impl.android.IntentResultListener;
-import com.codename1.io.Log;
 import com.codename1.ui.Display;
-import com.facebook.FacebookRequestError;
-import com.facebook.HttpMethod;
-import com.facebook.Request;
-import com.facebook.RequestAsyncTask;
-import com.facebook.Response;
-import com.facebook.Session;
-import com.facebook.SessionDefaultAudience;
-import com.facebook.SessionLoginBehavior;
-import com.facebook.SessionState;
+import com.codename1.util.Callback;
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
+import com.facebook.login.LoginManager;
+import com.facebook.share.model.AppInviteContent;
+import com.facebook.share.widget.AppInviteDialog;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * Class implementing the facebook API
@@ -58,20 +50,16 @@ import org.json.JSONObject;
  */
 public class FacebookImpl extends FacebookConnect {
 
-    private SessionDefaultAudience defaultAudience = SessionDefaultAudience.FRIENDS;
     private static List<String> permissions;
-    private SessionLoginBehavior loginBehavior = SessionLoginBehavior.SSO_WITH_FALLBACK;
-    private boolean publish = false;
     private boolean loginLock = false;
     private static final List<String> PUBLISH_PERMISSIONS = Arrays.asList("publish_actions");
-    private boolean pendingPublishReauthorization = false;
 
     public static void init() {
         FacebookConnect.implClass = FacebookImpl.class;
         permissions = new ArrayList<String>();
         String permissionsStr = Display.getInstance().getProperty("facebook_permissions", "");
         permissionsStr = permissionsStr.trim();
-        
+
         StringTokenizer token = new StringTokenizer(permissionsStr, ", ");
         if (token.countTokens() > 0) {
             try {
@@ -85,6 +73,7 @@ public class FacebookImpl extends FacebookConnect {
             }
 
         }
+        FacebookSdk.sdkInitialize(AndroidNativeUtil.getContext().getApplicationContext());
 
     }
 
@@ -103,188 +92,83 @@ public class FacebookImpl extends FacebookConnect {
             return;
         }
         loginLock = true;
-        AndroidNativeUtil.getActivity().runOnUiThread(new Runnable() {
+
+        LoginManager login = LoginManager.getInstance();
+        final CallbackManager mCallbackManager = CallbackManager.Factory.create();
+        if (AndroidNativeUtil.getActivity() == null) {
+            throw new RuntimeException("Cannot login to facebook when running in the background.");
+        }
+        final CodenameOneActivity activity = (CodenameOneActivity) AndroidNativeUtil.getActivity();
+        activity.setIntentResultListener(new IntentResultListener() {
+
             @Override
-            public void run() {
-                Session s = Session.getActiveSession();
-                if (s == null) {
-                    Log.p("CN1 Creating new session");
-                    s = new Session.Builder(AndroidNativeUtil.getActivity()).setApplicationId(Display.getInstance().getProperty("facebook_app_id", "")).build();
-                    Session.setActiveSession(s);
-                }
-                if (s.isOpened()) {
-                    Log.p("CN1 Login session already open");
-                    loginLock = false;
-                    return;
-                }
-                final CodenameOneActivity cn = (CodenameOneActivity) AndroidNativeUtil.getActivity();
-                cn.setIntentResultListener(new IntentResultListener() {
-                    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-                        Session s = Session.getActiveSession();
-                        if (s != null) {
-                            s.onActivityResult(AndroidNativeUtil.getActivity(), requestCode, resultCode, data);
-                        }
-                        cn.restoreIntentResultListener();
-                    }
-                });
-                Session.OpenRequest openRequest = new Session.OpenRequest(cn);
-                openRequest.setDefaultAudience(defaultAudience);
-                openRequest.setPermissions(permissions);
-                openRequest.setLoginBehavior(loginBehavior);
-                openRequest.setCallback(new Session.StatusCallback() {
-
-                    @Override
-                    public void call(Session session, SessionState state, final Exception exception) {
-                        loginLock = false;
-                        if (exception != null) {
-                            Log.p("Login calback exception");
-                            Log.e(exception);
-                            if (cb != null) {
-                                Display.getInstance().callSerially(new Runnable() {
-                                    public void run() {
-                                        Session.setActiveSession(null);
-                                        cb.loginFailed(exception.toString());
-                                    }
-                                });
-                            }
-                            cn.restoreIntentResultListener();
-                            return;
-                        }
-                        Log.p("CN1 Facebook session status callback " + state);
-                        if (state == SessionState.OPENED) {
-                            FaceBookAccess.setToken(session.getAccessToken());
-                            if (cb != null) {
-                                Display.getInstance().callSerially(new Runnable() {
-                                    public void run() {
-                                        Log.p("CN1 Facebook loginSuccessful");
-                                        cb.loginSuccessful();
-                                    }
-                                });
-                            }
-                            cn.restoreIntentResultListener();
-                        }
-                    }
-                });
-
-                if (publish) {
-                    s.openForPublish(openRequest);
-                } else {
-                    s.openForRead(openRequest);
-                }
+            public void onActivityResult(int requestCode, int resultCode, Intent data) {
+                mCallbackManager.onActivityResult(requestCode, resultCode, data);
+                activity.restoreIntentResultListener();
             }
         });
-
+        login.registerCallback(mCallbackManager, new FBCallback(cb));
+        login.logInWithReadPermissions(activity, permissions);
     }
 
     @Override
     public boolean isLoggedIn() {
-        return getToken() != null;
+        AccessToken accessToken = AccessToken.getCurrentAccessToken();
+        return accessToken != null && !accessToken.isExpired();
     }
 
     @Override
     public String getToken() {
-        final String[] arr = new String[1];
-        AndroidImplementation.runOnUiThreadAndBlock(new Runnable() {
-            @Override
-            public void run() {
-                Session s = Session.getActiveSession();
-                if (s != null && s.isOpened()) {
-                    arr[0] = s.getAccessToken();
-                }
-            }
-        });
-        return arr[0];
+        com.codename1.io.AccessToken t = getAccessToken();
+        if (t != null) {
+            return t.getToken();
+        }
+        return null;
+    }
+
+    @Override
+    public com.codename1.io.AccessToken getAccessToken() {
+        AccessToken fbToken = AccessToken.getCurrentAccessToken();
+        if (fbToken != null) {
+            String token = fbToken.getToken();
+            Date ex = fbToken.getExpires();
+            long diff = ex.getTime() - System.currentTimeMillis();
+            diff = diff / 1000;
+            com.codename1.io.AccessToken cn1Token = new com.codename1.io.AccessToken(token, "" + diff);
+            return cn1Token;
+        }
+        return null;
     }
 
     @Override
     public void logout() {
-        AndroidImplementation.runOnUiThreadAndBlock(new Runnable() {
-            @Override
-            public void run() {
-                Session s = Session.getActiveSession();
-                if (s.isOpened()) {
-                    s.closeAndClearTokenInformation();
-                    Session.setActiveSession(null);
-                }
-            }
-        });
+        LoginManager login = LoginManager.getInstance();
+        login.logOut();
     }
 
-    public void askPublishPermissions(final LoginCallback lc) {
-        AndroidNativeUtil.getActivity().runOnUiThread(new Runnable() {
+    public void askPublishPermissions(final LoginCallback cb) {
+        if (AndroidNativeUtil.getActivity() == null) {
+            throw new RuntimeException("Cannot ask for publish permissions when running in the background.");
+        
+        }
+        if (loginLock) {
+            return;
+        }
+        loginLock = true;
 
-            public void run() {
+        LoginManager login = LoginManager.getInstance();
+        final CallbackManager mCallbackManager = CallbackManager.Factory.create();
+        final CodenameOneActivity activity = (CodenameOneActivity) AndroidNativeUtil.getActivity();
+        activity.setIntentResultListener(new IntentResultListener() {
 
-                //try to login if not already logged in
-                Session session = Session.getActiveSession();
-                if (session == null) {
-                    login(new LoginCallback() {
-
-                        @Override
-                        public void loginSuccessful() {
-                            Log.p("CN1 askPublishPermissions");
-                            askPublishPermissions(lc);
-                        }
-
-                    });
-                    return;
-                }
-                if (session != null) {
-                    //Session.openActiveSessionFromCache(AndroidNativeUtil.getActivity());
-                    // Check for publish permissions    
-                    List<String> permissions = session.getPermissions();
-                    if (!isSubsetOf(PUBLISH_PERMISSIONS, permissions)) {
-                        pendingPublishReauthorization = true;
-                        final CodenameOneActivity cn = (CodenameOneActivity) AndroidNativeUtil.getActivity();
-                        cn.setIntentResultListener(new IntentResultListener() {
-                            public void onActivityResult(int requestCode, int resultCode, Intent data) {
-                                Session s = Session.getActiveSession();
-                                if (s != null) {
-                                    s.onActivityResult(AndroidNativeUtil.getActivity(), requestCode, resultCode, data);
-                                }
-                                cn.restoreIntentResultListener();
-                            }
-                        });
-                        //Session.OpenRequest openRequest = new Session.OpenRequest(cn);
-                        Session.NewPermissionsRequest newPermissionsRequest = new Session.NewPermissionsRequest(cn, PUBLISH_PERMISSIONS);
-                        newPermissionsRequest.setCallback(new Session.StatusCallback() {
-
-                            public void call(Session session, SessionState state, final Exception exception) {
-
-                                if (exception != null) {
-                                    Log.p("CN1 Write Permissions calback exception");
-                                    Log.e(exception);
-                                    Display.getInstance().callSerially(new Runnable() {
-                                        public void run() {
-                                            lc.loginFailed(exception.getMessage());
-                                        }
-                                    });
-
-                                    cn.restoreIntentResultListener();
-                                    return;
-                                }
-                                Log.p("CN1 askPublishPermissions");
-                                //if permissions granted call the method again to 
-                                //post the message on the wall.
-                                if (state == SessionState.OPENED) {
-                                    Display.getInstance().callSerially(new Runnable() {
-                                        public void run() {
-                                            lc.loginSuccessful();
-                                        }
-                                    });
-                                    cn.restoreIntentResultListener();
-                                }
-                            }
-                        });
-                        session.requestNewPublishPermissions(newPermissionsRequest);
-                        return;
-                    }
-
-                }
+            @Override
+            public void onActivityResult(int requestCode, int resultCode, Intent data) {
+                mCallbackManager.onActivityResult(requestCode, resultCode, data);
+                activity.restoreIntentResultListener();
             }
-
         });
-
+        login.registerCallback(mCallbackManager, new FBCallback(cb));
+        login.logInWithPublishPermissions(activity, PUBLISH_PERMISSIONS);
     }
 
     private boolean isSubsetOf(Collection<String> subset, Collection<String> superset) {
@@ -302,16 +186,112 @@ public class FacebookImpl extends FacebookConnect {
      * @return
      */
     public boolean hasPublishPermissions() {
-
-        Session session = Session.getActiveSession();
-
-        if (session != null) {
-            // Check for publish permissions    
-            List<String> permissions = session.getPermissions();
-            return isSubsetOf(PUBLISH_PERMISSIONS, permissions);
-
+        AccessToken fbToken = AccessToken.getCurrentAccessToken();
+        if (fbToken != null && !fbToken.isExpired()) {
+            return fbToken.getPermissions().contains(PUBLISH_PERMISSIONS.get(0));
         }
         return false;
+    }
+
+    @Override
+    public void inviteFriends(String appLinkUrl, String previewImageUrl) {
+        inviteFriends(appLinkUrl, previewImageUrl, null);
+    }
+    
+    @Override
+    public void inviteFriends(String appLinkUrl, String previewImageUrl, final Callback cb) {
+        if (AndroidNativeUtil.getActivity() == null) {
+            throw new RuntimeException("Cannot invite friends while running in the background.");
+        }
+        if (AppInviteDialog.canShow()) {
+            AppInviteContent content = new AppInviteContent.Builder()
+                    .setApplinkUrl(appLinkUrl)
+                    .setPreviewImageUrl(previewImageUrl)
+                    .build();
+            final CodenameOneActivity activity = (CodenameOneActivity) AndroidNativeUtil.getActivity();
+            if(cb == null){
+                AppInviteDialog.show(activity, content);
+            }else{
+                AppInviteDialog appInviteDialog = new AppInviteDialog(activity);
+                final CallbackManager mCallbackManager = CallbackManager.Factory.create();
+                activity.setIntentResultListener(new IntentResultListener() {
+
+                    @Override
+                    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+                        mCallbackManager.onActivityResult(requestCode, resultCode, data);
+                        activity.restoreIntentResultListener();
+                    }
+                });
+                appInviteDialog.registerCallback(mCallbackManager, new FacebookCallback<AppInviteDialog.Result>() {
+                    @Override
+                    public void onSuccess(AppInviteDialog.Result result) {
+                        Display.getInstance().callSerially(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                cb.onSucess(null);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        Display.getInstance().callSerially(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                cb.onError(null, null, -1, "User Cancelled");
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(final FacebookException e) {
+                        Display.getInstance().callSerially(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                cb.onError(null, e, 0, e.getMessage());
+                            }
+                        });
+                    }
+                });
+                appInviteDialog.show(content);
+            }
+        }
+
+    }
+
+    @Override
+    public boolean isInviteFriendsSupported() {
+        return true;
+    }
+
+    class FBCallback implements FacebookCallback {
+
+        private LoginCallback cb;
+
+        public FBCallback(LoginCallback cb) {
+            this.cb = cb;
+        }
+
+        @Override
+        public void onSuccess(Object result) {
+            cb.loginSuccessful();
+            loginLock = false;
+        }
+
+        @Override
+        public void onCancel() {
+            cb.loginFailed("User cancelled");
+            loginLock = false;
+        }
+
+        @Override
+        public void onError(FacebookException fe) {
+            cb.loginFailed(fe.getMessage());
+            loginLock = false;
+        }
 
     }
 

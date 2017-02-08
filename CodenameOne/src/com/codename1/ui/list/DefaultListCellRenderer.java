@@ -59,7 +59,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void initLaf(UIManager uim) {
         super.initLaf(uim);
@@ -72,7 +72,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void refreshTheme(boolean merge) {
         super.refreshTheme(merge);
@@ -92,7 +92,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
 
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getCellRendererComponent(Component list, Object model, T value, int index, boolean isSelected) {
         if(!alwaysRenderSelection && !Display.getInstance().shouldRenderSelection(list)) {
@@ -138,7 +138,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Style getStyle() {
         if (alwaysRenderSelection && hasFocus()) {
@@ -149,14 +149,14 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getListCellRendererComponent(List list, T value, int index, boolean isSelected) {
         return getCellRendererComponent(list, list.getModel(), value, index, isSelected);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getListFocusComponent(List list) {
         return focusComponent;
@@ -206,7 +206,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     }
 
     /**
-     * Inidicates whether the default list cell renderer will show numbers by default
+     * Indicates whether the default list cell renderer will show numbers by default
      * when constructed
      *
      * @param def true to show numbers for all renderers created in the future
@@ -216,7 +216,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     }
 
     /**
-     * Inidicates whether the default list cell renderer will show numbers by default
+     * Indicates whether the default list cell renderer will show numbers by default
      * when constructed
      *
      * @return true when showing numbers, false otherwise
@@ -226,7 +226,7 @@ public class DefaultListCellRenderer<T> extends Label implements ListCellRendere
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Component getFocusComponent(Component list) {
         return focusComponent;

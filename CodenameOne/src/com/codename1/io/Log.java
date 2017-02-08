@@ -35,6 +35,7 @@ import com.codename1.ui.Dialog;
 import com.codename1.ui.layouts.BorderLayout;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
@@ -50,6 +51,7 @@ import java.io.Writer;
  * @author Shai Almog
  */
 public class Log {
+    private static boolean crashBound;
     /**
      * Constant indicating the logging level Debug is the default and the lowest level
      * followed by info, warning and error
@@ -99,6 +101,8 @@ public class Log {
     public static int REPORTING_PRODUCTION = 3; 
     
     private int reporting = REPORTING_NONE;
+
+    private static boolean initialized;
     
     /**
      * Indicates the level of log reporting, this allows developers to send device logs to the cloud
@@ -168,7 +172,7 @@ public class Log {
         r.addArgument("p", Display.getInstance().getProperty("package_name", ""));
         r.addArgument("v", Display.getInstance().getProperty("AppVersion", "0.1"));
         r.addArgument("pl", Display.getInstance().getPlatformName());
-        r.addArgument("u", Display.getInstance().getProperty("udid", ""));
+        //r.addArgument("u", Display.getInstance().getProperty("udid", ""));
         com.codename1.io.NetworkManager.getInstance().addToQueueAndWait(r);
         return Preferences.get("UDeviceId__$", (long)-1);
     }
@@ -177,6 +181,45 @@ public class Log {
      * Sends the current log to the cloud regardless of the reporting level
      */
     public static void sendLog() {
+        if(Display.getInstance().getProperty("cloudServerURL", null) != null) {
+            sendLogLegacy();
+            return;
+        }
+        try {
+            // this can cause a crash
+            if(!Display.isInitialized()) {
+                return;
+            }
+            if(!instance.logDirty) {
+                return;
+            }
+            instance.logDirty = false;
+            long devId = getUniqueDeviceId();
+            if(devId < 0) {
+                Dialog.show("Send Log Error", "Device Not Registered: Sending a log from an unregistered device is impossible", "OK", null);
+                return;
+            }
+            ConnectionRequest r = new ConnectionRequest();
+            r.setPost(false);
+            MultipartRequest m = new MultipartRequest();
+            m.setUrl("https://crashreport.codenameone.com/CrashReporterEmail/sendCrashReport");
+            byte[] read = Util.readInputStream(Storage.getInstance().createInputStream("CN1Log__$"));
+            m.addArgument("i", "" + devId);
+            m.addArgument("u",Display.getInstance().getProperty("built_by_user", ""));
+            m.addArgument("p", Display.getInstance().getProperty("package_name", ""));
+            m.addArgument("v", Display.getInstance().getProperty("AppVersion", "0.1"));
+            m.addData("log", read, "text/plain");
+            m.setFailSilently(true);
+            NetworkManager.getInstance().addToQueueAndWait(m);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Sends the current log to the cloud regardless of the reporting level
+     */
+    private static void sendLogLegacy() {
         try {
             // this can cause a crash
             if(!Display.isInitialized()) {
@@ -282,6 +325,18 @@ public class Log {
      * @param level one of DEBUG, INFO, WARNING, ERROR
      */
     protected void print(String text, int level) {
+        if(!initialized) {
+            initialized  = true;
+            try {
+                InputStream is = Display.getInstance().getResourceAsStream(getClass(), "/cn1-version-numbers");
+                if(is != null) {
+                    print("Codename One revisions: " + Util.readToString(is), INFO);
+                }
+            } catch(IOException err) {
+                // shouldn't happen...
+                err.printStackTrace();
+            }
+        }
         if(this.level > level) {
             return;
         }
@@ -374,6 +429,7 @@ public class Log {
      * the application any way it sees fit
      * 
      * @return string containing the whole log
+     * @deprecated this was practical in old J2ME devices but hasn't been maintained in ages, use sendLog() instead
      */
     public static String getLogContent() {
         try {
@@ -402,6 +458,7 @@ public class Log {
      * Places a form with the log as a TextArea on the screen, this method can
      * be attached to appear at a given time or using a fixed global key. Using
      * this method might cause a problem with further log output
+     * @deprecated this method is an outdated method that's no longer supported
      */
     public static void showLog() {
         try {
@@ -483,5 +540,43 @@ public class Log {
                 }
             }
         });
+    }
+    
+    /**
+     * Binds pro based crash protection logic that will send out an email in case of an exception thrown on the EDT
+     * 
+     * @param consumeError true will hide the error from the user, false will leave the builtin logic that defaults to
+     * showing an error dialog to the user
+     */
+    public static void bindCrashProtection(final boolean consumeError) {
+        if(Display.getInstance().isSimulator()) {
+            return;
+        }
+        Display.getInstance().addEdtErrorHandler(new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                if(consumeError) {
+                    evt.consume();
+                }
+                p("Exception in " + Display.getInstance().getProperty("AppName", "app") + " version " + Display.getInstance().getProperty("AppVersion", "Unknown"));
+                p("OS " + Display.getInstance().getPlatformName());
+                p("Error " + evt.getSource());
+                if(Display.getInstance().getCurrent() != null) {
+                    p("Current Form " + Display.getInstance().getCurrent().getName());
+                } else {
+                    p("Before the first form!");
+                }
+                e((Throwable)evt.getSource());
+                sendLog();
+            }
+        });
+        crashBound = true;
+    }
+    
+    /**
+     * Returns true if the user bound crash protection
+     * @return true if crash protection is bound
+     */
+    public static boolean isCrashBound() {
+        return crashBound;
     }
 }

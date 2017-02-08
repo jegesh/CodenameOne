@@ -23,8 +23,10 @@
  */
 package com.codename1.xml;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Vector;
 
 /**
@@ -33,7 +35,7 @@ import java.util.Vector;
  *
  * @author Ofir Leitner
  */
-public class Element {
+public class Element implements Iterable<Element> {
 
     /**
      * A constant that can be used for the get descendants methods to denote infinite recursion
@@ -53,7 +55,7 @@ public class Element {
    /**
      * A vector containing this element's children
      */
-    private Vector children;
+    private ArrayList<Element> children;
 
     /**
      * This element's parent
@@ -67,6 +69,8 @@ public class Element {
 
     boolean isComment;
 
+    boolean caseSensitive;
+    
     /**
      * Constructs and Element without specifying a name
      * This can be used by subclasses that do not require name assigments.
@@ -149,7 +153,7 @@ public class Element {
      */
     public void addChild(Element childElement) {
         setChildParent(childElement);
-        children.addElement(childElement);
+        children.add(childElement);
         //childElement.setParent(this);
     }
 
@@ -188,18 +192,27 @@ public class Element {
      * Returns the internal children vector
      *
      * @return the children vector
+     * @deprecated this uses the old vector API instead of the more modern Collection/List
      */
     protected Vector getChildren() {
-        return children;
+        if(children == null) {
+            return null;
+        }
+        return new Vector(children);
     }
 
     /**
      * Sets the children vector of this Element
      *
      * @param children The vector to set as this Element's children
+     * @deprecated this uses the old vector API instead of the more modern Collection/List
      */
     protected void setChildren(Vector children) {
-        this.children=children;
+        if(children == null) {
+            this.children = null;
+        } else {
+            this.children = new ArrayList<Element>(children);
+        }
     }
 
     /**
@@ -235,7 +248,7 @@ public class Element {
         if ((index<0) || (children==null) || (index>=children.size())) {
             throw new ArrayIndexOutOfBoundsException();
         }
-        return (Element)children.elementAt(index);
+        return (Element)children.get(index);
 
     }
 
@@ -252,7 +265,7 @@ public class Element {
         int i=0;
         Element found=null;
         while ((found==null) && (i<children.size())) {
-            Element child=(Element)children.elementAt(i);
+            Element child=(Element)children.get(i);
             if ((!child.textElement) && (child.getTagName().equalsIgnoreCase(name))) {
                 found=child;
             } else {
@@ -276,7 +289,7 @@ public class Element {
         if (children!=null) {
             int i=0;
             while (i<children.size()) {
-                Element child=(Element)children.elementAt(i);
+                Element child=(Element)children.get(i);
                 Element match=child.getElementById(id);
                 if (match!=null) {
                     return match;
@@ -296,7 +309,7 @@ public class Element {
         if (children!=null) {
             int i=0;
             while (i<children.size()) {
-                Element child=(Element)children.elementAt(i);
+                Element child=(Element)children.get(i);
                 if (depth>1) {
                     child.getDescendantsByTagNameInternal(v, name,depth-1);
                 }
@@ -313,7 +326,7 @@ public class Element {
         if (children!=null) {
             int i=0;
             while (i<children.size()) {
-                Element child=(Element)children.elementAt(i);
+                Element child=(Element)children.get(i);
                 if (depth>1) {
                     child.getDescendantsByTagNameAndAttributeInternal(v, name, attribute, depth-1);
                 }
@@ -397,7 +410,7 @@ public class Element {
         }
         int i=0;
         while (i<children.size()) {
-            Element child=(Element)children.elementAt(i);
+            Element child=(Element)children.get(i);
             if (depth>0) {
                 child.getTextDescendantsInternal(v, text, caseSensitive, depth-1);
             }
@@ -478,7 +491,7 @@ public class Element {
         if (children!=null) {
             int i=0;
             while (i<children.size()) {
-                Element child=(Element)children.elementAt(i);
+                Element child=(Element)children.get(i);
                 if (child.contains(element)) {
                     return true;
                 }
@@ -537,6 +550,24 @@ public class Element {
         }
     }
 
+    /**
+     * Helper method to return the attribute as an integer
+     * @param name the name of the attribute
+     * @param def default value
+     * @return return value
+     */
+    public int getAttributeAsInt(String name, int def) {
+        String s = getAttribute(name);
+        if(s == null) {
+            return def;
+        }
+        try {
+            return Integer.parseInt(s);
+        } catch(NumberFormatException e) {
+            return def;
+        }
+    }
+    
 
     /**
      * Returns the attribute value by its name (or null if it wasn't defined for this element)
@@ -547,6 +578,12 @@ public class Element {
     public String getAttribute(String  name) {
         if (attributes==null) {
             return null;
+        }
+        if(!caseSensitive) {
+            String val = (String)attributes.get(name.toLowerCase());
+            if(val != null) {
+                return val;
+            }
         }
         return (String)attributes.get(name);
     }
@@ -560,7 +597,7 @@ public class Element {
             throw new IllegalStateException("An Element can't have two parents.");
         }
         if (children==null) {
-            children=new Vector();
+            children=new ArrayList<Element>();
         }
         child.setParent(this);
     }
@@ -574,9 +611,9 @@ public class Element {
         if ((index<0) || (children==null) || (index>=children.size())) {
             throw new ArrayIndexOutOfBoundsException();
         }
-        Element child=(Element)children.elementAt(index);
+        Element child=(Element)children.get(index);
         child.setParent(null);
-        children.removeElementAt(index);
+        children.remove(index);
     }
 
     /**
@@ -589,7 +626,7 @@ public class Element {
         int result=-1;
         if (children!=null) {
             for(int i=0;i<children.size();i++) {
-                if (child==children.elementAt(i)) {
+                if (child==children.get(i)) {
                     result=i;
                     break;
                 }
@@ -606,7 +643,7 @@ public class Element {
      */
     public void insertChildAt(Element child,int index) {
         setChildParent(child);
-        children.insertElementAt(child, index);
+        children.add(index, child);
     }
 
     /**
@@ -620,7 +657,7 @@ public class Element {
             setChildParent(newChild);
             int index=children.indexOf(oldChild);
             if (index!=-1) {
-                children.insertElementAt(newChild, index);
+                children.add(index, newChild);
                 removeChildAt(index+1);
 //                children.removeElement(oldChild);
 //                oldChild.setParent(null);
@@ -688,7 +725,7 @@ public class Element {
             str+=">\n";
             if (children!=null) {
                 for(int i=0;i<children.size();i++) {
-                    str+=((Element)children.elementAt(i)).toString(spacing+' ');
+                    str+=((Element)children.get(i)).toString(spacing+' ');
                 }
             }
             str+=spacing+"</"+getTagName()+">\n";
@@ -705,7 +742,7 @@ public class Element {
     public boolean hasTextChild() {
         if(children != null) {
             for (int iter = 0 ; iter < children.size() ; iter++) {
-                Object child = children.elementAt(iter);
+                Object child = children.get(iter);
                 if (child instanceof Element && ((Element)child).isTextElement()) {
                     return true;
                 }
@@ -720,5 +757,13 @@ public class Element {
      */
     public boolean isEmpty() {
         return children == null || children.isEmpty();
+    }
+
+    /**
+     * Iterable for children of this entry making tree walking easier, this makes for(Element child : base) {} possible
+     * @return the children iterator
+     */
+    public Iterator<Element> iterator() {
+        return children.iterator();
     }
 }

@@ -30,9 +30,40 @@ import com.codename1.ui.plaf.Style;
 import com.codename1.ui.plaf.UIManager;
 
 /**
- * Layout manager that places elements in a row or column according to 
- * box orientation
+ * <p>Layout manager that places elements in a row (<code>X_AXIS</code>) or column (<code>Y_AXIS</code>) 
+ * according to box orientation. Box is a very simple and predictable layout that serves as the "workhorse" of 
+ * component lists in Codename One<br>
+ * You can create a box layout Y UI using syntax such as this</p>
+ * 
+ * <script src="https://gist.github.com/codenameone/99f5e43061b4c6413d16.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/box-layout-y.png" alt="Box Layout Y" />
+ * 
+ * <p>
+ * This can also be expressed with more terse syntax e.g. an X axis layout like this:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/5d2908517241126b5803.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/box-layout-x.png" alt="Box Layout X" />
  *
+ * <p>
+ * The <code>BoxLayout</code> keeps the preferred size of its destination orientation and scales elements on the other axis. 
+ * Specifically <code>X_AXIS</code> will keep the preferred width of the component while growing all
+ * the components vertically to match in size. Its <code>Y_AXIS</code> counterpart keeps the preferred height
+ * while growing the components horizontally.<br>
+ * This behavior is very useful since it allows elements to align as they would all have the same size.
+ * </p>
+ * <p>
+ * In some cases the growing behavior in the X axis is undesired, for these cases we can use the <code>X_AXIS_NO_GROW</code>
+ * variant.
+ * </p>
+ * <img src="https://www.codenameone.com/img/developer-guide/box-layout-x-no-grow.png" alt="Box Layout X No Grow" />
+ * 
+ * <h4>FlowLayout vs. BoxLayout.X_AXIS/X_AXIS_NO_GROW</h4>
+ * <p>
+ * There are quite a few differences between {@link FlowLayout} and <code>BoxLayout</code>. When it doesn't
+ * matter to you we tend to recommend <code>BoxLayout</code> as it acts more consistently in all situations since
+ * its far simpler. Another advantage of <code>BoxLayout</code> is the fact that it grows and thus aligns nicely.
+ * </p>
+ * 
  * @author Chen Fishbein
  */
 public class BoxLayout extends Layout{
@@ -65,13 +96,31 @@ public class BoxLayout extends Layout{
     }
     
     /**
-     * @inheritDoc
+     * Shorthand for {@code new BoxLayout(BoxLayout.Y_AXIS)}
+     * @return a new Y axis {@code BoxLayout}
+     */
+    public static BoxLayout y() {
+        return new BoxLayout(BoxLayout.Y_AXIS);
+    }
+    
+    
+    /**
+     * Shorthand for {@code new BoxLayout(BoxLayout.X_AXIS)}
+     * @return a new X axis {@code BoxLayout}
+     */
+    public static BoxLayout x() {
+        return new BoxLayout(BoxLayout.X_AXIS);
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public void layoutContainer(Container parent) {        
-        int width = parent.getLayoutWidth() - parent.getSideGap() - parent.getStyle().getPadding(false, Component.RIGHT) - parent.getStyle().getPadding(false, Component.LEFT);
-        int height = parent.getLayoutHeight() - parent.getBottomGap() - parent.getStyle().getPadding(false, Component.BOTTOM) - parent.getStyle().getPadding(false, Component.TOP);
-        int x = parent.getStyle().getPadding(parent.isRTL(), Component.LEFT);
-        int y = parent.getStyle().getPadding(false, Component.TOP);
+        Style ps = parent.getStyle();
+        int width = parent.getLayoutWidth() - parent.getSideGap() - ps.getHorizontalPadding();
+        int height = parent.getLayoutHeight() - parent.getBottomGap() - ps.getVerticalPadding();
+        int x = ps.getPaddingLeft(parent.isRTL());
+        int y = ps.getPaddingTop();
         int numOfcomponents = parent.getComponentCount();
         
         boolean rtl = parent.isRTL();
@@ -87,68 +136,70 @@ public class BoxLayout extends Layout{
             switch(axis) {
                 case Y_AXIS:
                     int cmpBottom = height;
-                    cmp.setWidth(width - stl.getMargin(parent.isRTL(), Component.LEFT) - stl.getMargin(parent.isRTL(), Component.RIGHT));
+                    cmp.setWidth(width - stl.getHorizontalMargins());
                     int cmpH = cmp.getPreferredH();
 
-                    y += stl.getMargin(false, Component.TOP);
+                    y += stl.getMarginTop();
 
-                    if(y >= cmpBottom && !parent.isScrollableY()){
+                    if(y - ps.getPaddingTop() >= cmpBottom && !parent.isScrollableY()){
                         cmpH = 0;
-                    }else if(y + cmpH - parent.getStyle().getPadding(false, Component.TOP) > cmpBottom){
-                        cmpH = cmpBottom - y - stl.getMargin(false, Component.BOTTOM);
+                    }else if(y + cmpH - ps.getPaddingTop() > cmpBottom){
+                        if(!parent.isScrollableY()) {
+                            cmpH = cmpBottom - y - stl.getMarginBottom();
+                        }
                     }
                     cmp.setHeight(cmpH);
-                    cmp.setX(x + stl.getMargin(parent.isRTL(), Component.LEFT));
+                    cmp.setX(x + stl.getMarginLeft(parent.isRTL()));
                     cmp.setY(y);
-                    y += cmp.getHeight() + stl.getMargin(false, Component.BOTTOM);
+                    y += cmp.getHeight() + stl.getMarginBottom();
                     break;
                 case X_AXIS_NO_GROW: {
                     int cmpRight = width;
                     height = Math.min(getPreferredSize(parent).getHeight(), height);
                     int cmpW = cmp.getPreferredW();
 
-                    x += stl.getMargin(false, Component.LEFT);
+                    x += stl.getMarginLeftNoRTL();
 
                     if(x >= cmpRight && !parent.isScrollableX()){
                         cmpW = 0;
                     } else {
-                        if(x + cmpW - parent.getStyle().getPadding(false, Component.LEFT) > cmpRight){
-                            cmpW = cmpRight - x - stl.getMargin(false, Component.RIGHT);
+                        if(x + cmpW - ps.getPaddingLeftNoRTL() > cmpRight){
+                            cmpW = cmpRight - x - stl.getMarginRightNoRTL();
                         }
                     }
                     cmp.setWidth(cmpW);
-                    cmp.setHeight(height- stl.getMargin(false, Component.TOP) - stl.getMargin(false, Component.BOTTOM));
+                    cmp.setHeight(height- stl.getMarginTop() - stl.getMarginBottom());
                     if(rtl) {
                             cmp.setX(width + initX - (x - initX) - cmpW);
                     } else {
                             cmp.setX(x);
                     }
-                    cmp.setY(y + stl.getMargin(false, Component.TOP));
-                    x += cmp.getWidth() + stl.getMargin(false, Component.RIGHT);
+                    cmp.setY(y + stl.getMarginTop());
+                    x += cmp.getWidth() + stl.getMarginRightNoRTL();
                     break;
                 }
                 default:
                     int cmpRight = width;
                     int cmpW = cmp.getPreferredW();
 
-                    x += stl.getMargin(false, Component.LEFT);
+                    x += stl.getMarginLeftNoRTL();
 
                     if(x >= cmpRight && !parent.isScrollableX()){
                         cmpW = 0;
                     } else {
-                        if(x + cmpW - parent.getStyle().getPadding(false, Component.LEFT) > cmpRight){
-                            cmpW = cmpRight - x - stl.getMargin(false, Component.RIGHT);
+                        if(x + cmpW - ps.getPaddingLeftNoRTL()> cmpRight){
+                            cmpW = cmpRight - x - stl.getMarginRightNoRTL();
                         }
                     }
                     cmp.setWidth(cmpW);
-                    cmp.setHeight(height- stl.getMargin(false, Component.TOP) - stl.getMargin(false, Component.BOTTOM));
+                    cmp.setHeight(height- stl.getVerticalMargins());
                     if(rtl) {
                             cmp.setX(width + initX - (x - initX) - cmpW);
                     } else {
                             cmp.setX(x);
                     }
-                    cmp.setY(y + stl.getMargin(false, Component.TOP));
-                    x += cmp.getWidth() + stl.getMargin(false, Component.RIGHT);
+                    cmp.setY(y + stl.getMarginTop());
+                    x += cmp.getWidth() + stl.getMarginRightNoRTL();
                     break;
             }
         }
@@ -158,7 +209,7 @@ public class BoxLayout extends Layout{
 
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Dimension getPreferredSize(Container parent) {
         int width = 0;
@@ -170,17 +221,18 @@ public class BoxLayout extends Layout{
             Style stl = cmp.getStyle();
             
             if(axis == Y_AXIS){
-                int cmpH = cmp.getPreferredH() + stl.getMargin(false, Component.TOP) + stl.getMargin(false, Component.BOTTOM);
+                int cmpH = cmp.getPreferredH() + stl.getVerticalMargins();
                 height += cmpH;
-                width = Math.max(width , cmp.getPreferredW()+ stl.getMargin(false, Component.LEFT) + stl.getMargin(false, Component.RIGHT));
+                width = Math.max(width , cmp.getPreferredW()+ stl.getHorizontalMargins());
             }else{
-                int cmpW = cmp.getPreferredW() + stl.getMargin(false, Component.LEFT) + stl.getMargin(false, Component.RIGHT);
+                int cmpW = cmp.getPreferredW() + stl.getHorizontalMargins();
                 width += cmpW;
-                height = Math.max(height, cmp.getPreferredH() + stl.getMargin(false, Component.TOP) + stl.getMargin(false, Component.BOTTOM));
+                height = Math.max(height, cmp.getPreferredH() + stl.getVerticalMargins());
             }
         }
-        dim.setWidth(width + parent.getStyle().getPadding(false, Component.LEFT)+ parent.getStyle().getPadding(false, Component.RIGHT));
-        dim.setHeight(height + parent.getStyle().getPadding(false, Component.TOP)+ parent.getStyle().getPadding(false, Component.BOTTOM));
+        Style s = parent.getStyle();
+        dim.setWidth(width + s.getHorizontalPadding());
+        dim.setHeight(height + s.getVerticalPadding());
         return dim;
     }  
 
@@ -194,7 +246,7 @@ public class BoxLayout extends Layout{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String toString() {
         if(axis == X_AXIS) {
@@ -204,9 +256,40 @@ public class BoxLayout extends Layout{
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public boolean equals(Object o) {
         return super.equals(o) && axis == ((BoxLayout)o).axis;
+    }
+    
+    /**
+     * The equivalent of Container.enclose() with a box layout Y
+     * <img src="https://www.codenameone.com/img/developer-guide/box-layout-x.png" alt="Box Layout X" />
+     * @param cmps the set of components
+     * @return the newly created container
+     */
+    public static Container encloseY(Component... cmps) {
+        return Container.encloseIn(new BoxLayout(BoxLayout.Y_AXIS), cmps);
+    }
+
+    
+    /**
+     * The equivalent of Container.enclose() with a box layout X
+     * <img src="https://www.codenameone.com/img/developer-guide/box-layout-x.png" alt="Box Layout X" />
+     * @param cmps the set of components
+     * @return the newly created container
+     */
+    public static Container encloseX(Component... cmps) {
+        return Container.encloseIn(new BoxLayout(BoxLayout.X_AXIS), cmps);
+    }
+
+    /**
+     * The equivalent of Container.enclose() with a box layout X no grow option
+     * <img src="https://www.codenameone.com/img/developer-guide/box-layout-x.png" alt="Box Layout X" />
+     * @param cmps the set of components
+     * @return the newly created container
+     */
+    public static Container encloseXNoGrow(Component... cmps) {
+        return Container.encloseIn(new BoxLayout(BoxLayout.X_AXIS_NO_GROW), cmps);
     }
 }

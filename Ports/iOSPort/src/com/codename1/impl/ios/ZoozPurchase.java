@@ -30,7 +30,7 @@ import com.codename1.ui.Display;
 import java.io.IOException;
 
 /**
- * Implementation of the purchase API 
+ * Implementation of the purchase API
  *
  * @author Shai Almog
  */
@@ -42,7 +42,7 @@ class ZoozPurchase extends Purchase implements Runnable {
     private static boolean fetchProductsFailed;
     private static boolean fetchProductsComplete;
     private static String fetchProductsFailedMessage;
-    
+
     private IOSNative nativeInstance;
     private IOSImplementation ioImpl;
     private static String transactionId;
@@ -80,19 +80,20 @@ class ZoozPurchase extends Purchase implements Runnable {
             LOCK.notify();
         }
     }
-    
-    static void fetchProductsCanceledOrFailed(String error){
+
+    static void fetchProductsCanceledOrFailed(String error) {
         fetchProductsFailedMessage = error;
         fetchProductsFailed = true;
     }
-    
+
     static void fetchProductsComplete(){
         fetchProductsComplete=true;
     }
 
     public synchronized Product[] getProducts(String[] skus) {
-        final Product[] p = new Product[skus.length];
-        for(int iter = 0 ; iter < p.length ; iter++) {
+        int numSkus = skus.length;
+        final Product[] p = new Product[numSkus];
+        for(int iter = 0; iter < numSkus; iter++) {
             p[iter] = new Product();
         }
         fetchProductsFailed = false;
@@ -111,8 +112,8 @@ class ZoozPurchase extends Purchase implements Runnable {
                 }
             }
         });
-        if (fetchProductsFailed){
-            Log.e(new IOException("Failed to fetch products: "+fetchProductsFailedMessage));
+        if(fetchProductsFailed) {
+            Log.e(new IOException("Failed to fetch products: " + fetchProductsFailedMessage));
             return null;
         }
         return p;
@@ -127,11 +128,11 @@ class ZoozPurchase extends Purchase implements Runnable {
     }
 
 
-    /*public void subscribe(String sku) {
+    public void subscribe(String sku) {
         purchase(sku);
-    }*/
+    }
 
-
+   
     public boolean isSubscriptionSupported() {
         return false;
     }
@@ -144,7 +145,7 @@ class ZoozPurchase extends Purchase implements Runnable {
     public boolean isManualPaymentSupported() {
         return true;
     }
-    
+
     @Override
     public String pay(double amount, final String currency, String invoiceNumber) {
         String zoozAppKey = Display.getInstance().getProperty("ZoozAppKey", "");
@@ -156,8 +157,8 @@ class ZoozPurchase extends Purchase implements Runnable {
         Display.getInstance().callSerially(new Runnable() {
             @Override
             public void run() {
-                if(callback != null) {
-                    if(errorMessage != null) {
+                if (callback != null) {
+                    if (errorMessage != null) {
                         callback.paymentFailed(purchaseId, errorMessage);
                     } else {
                         // iOS port doesn't return the currency in its callback
@@ -168,16 +169,16 @@ class ZoozPurchase extends Purchase implements Runnable {
         });
         return transactionId;
     }
-    
+
     @Override
     public String pay(double amount, String currency) {
         return pay(amount, currency, "N/A");
     }
-    
+
     @Override
     public void run() {
-        synchronized(LOCK) {
-            while(!completed) {
+        synchronized (LOCK) {
+            while (!completed) {
                 try {
                     LOCK.wait();
                 } catch (InterruptedException ex) {
@@ -185,14 +186,14 @@ class ZoozPurchase extends Purchase implements Runnable {
             }
         }
     }
-    
+
     @Override
     public boolean isRestoreSupported() {
         return true;
     }
-    
+
     @Override
     public void restore() {
         nativeInstance.restorePurchases();
-    }
+    }  
 }

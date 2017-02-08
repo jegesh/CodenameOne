@@ -22,8 +22,6 @@
  */
 package com.codename1.ui.validation;
 
-import com.codename1.util.regex.RE;
-
 /**
  * Creates a validation constraint based on minimum input length
  *
@@ -53,7 +51,7 @@ public class LengthConstraint implements Constraint {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public boolean isValid(Object value) {
@@ -61,7 +59,7 @@ public class LengthConstraint implements Constraint {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public String getDefaultFailMessage() {

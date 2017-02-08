@@ -118,7 +118,8 @@ public class MenuBar extends Container implements ActionListener {
     private Form parent;
     private boolean thirdSoftButton;
     private boolean hideEmptyCommands;
-
+    private boolean menuDisplaying;
+    
     /**
      * Empty Constructor
      */
@@ -316,7 +317,12 @@ public class MenuBar extends Container implements ActionListener {
         return clearCommand;
     }
 
-    private Button findCommandComponent(Command c) {
+    /**
+     * Find the command component instance if such an instance exists
+     * @param c the command instance
+     * @return the button instance
+     */
+    public Button findCommandComponent(Command c) {
         Button b = findCommandComponent(c, this);
         if (b == null) {
             return findCommandComponent(c, getTitleAreaContainer());
@@ -439,6 +445,9 @@ public class MenuBar extends Container implements ActionListener {
      */
     public void setBackCommand(Command backCommand) {
         this.backCommand = backCommand;
+        if(parent.getToolbar() != null) {
+            return;
+        }
         if(backCommand != null && UIManager.getInstance().isThemeConstant("hideBackCommandBool", false)) {
             removeCommand(backCommand);
         }
@@ -564,7 +573,7 @@ public class MenuBar extends Container implements ActionListener {
                         return;
                     }
                     if (softCommand[iter] != null) {
-                        ActionEvent e = new ActionEvent(softCommand[iter]);
+                        ActionEvent e = new ActionEvent(softCommand[iter],ActionEvent.Type.Command);
                         softCommand[iter].actionPerformed(e);
                         if (!e.isConsumed()) {
                             parent.actionCommandImpl(softCommand[iter]);
@@ -628,7 +637,7 @@ public class MenuBar extends Container implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void setUnselectedStyle(Style style) {
         style.setMargin(Component.TOP, 0, true);
@@ -668,6 +677,14 @@ public class MenuBar extends Container implements ActionListener {
     }
 
     /**
+     * This method will return true if the menu dialog is currently displaying
+     * @return true of the menu dialog is displaying
+     */
+    public boolean isMenuShowing(){
+        return menuDisplaying;
+    }
+    
+    /**
      * This method shows the menu on the Form.
      * The method creates a Dialog with the commands and calls showMenuDialog.
      * The method blocks until the user dispose the dialog.
@@ -676,7 +693,11 @@ public class MenuBar extends Container implements ActionListener {
         final Dialog d = new Dialog("Menu", "");
         d.setDisposeWhenPointerOutOfBounds(true);
         d.setMenu(true);
-
+        d.addOrientationListener(new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                d.dispose();
+            }
+        });
         d.setTransitionInAnimator(transitionIn);
         d.setTransitionOutAnimator(transitionOut);
         d.setLayout(new BorderLayout());
@@ -705,13 +726,15 @@ public class MenuBar extends Container implements ActionListener {
         if (((Form) d).getMenuBar().commandList instanceof List) {
             ((List) ((Form) d).getMenuBar().commandList).addActionListener(((Form) d).getMenuBar());
         }
+        menuDisplaying = true;
         Command result = showMenuDialog(d);
+        menuDisplaying = false;
         if (result != cancelMenuItem) {
             Command c = null;
             if (result == selectMenuItem) {
                 c = getComponentSelectedCommand(((Form) d).getMenuBar().commandList);
                 if (c != null) {
-                    ActionEvent e = new ActionEvent(c);
+                    ActionEvent e = new ActionEvent(c,ActionEvent.Type.Command);
                     c.actionPerformed(e);
                 }
             } else {
@@ -720,7 +743,7 @@ public class MenuBar extends Container implements ActionListener {
                 if (!isTouchMenus()) {
                     c = result;
                     if (c != null) {
-                        ActionEvent e = new ActionEvent(c);
+                        ActionEvent e = new ActionEvent(c,ActionEvent.Type.Command);
                         c.actionPerformed(e);
                     }
                 }
@@ -894,7 +917,8 @@ public class MenuBar extends Container implements ActionListener {
                     rightContainer.removeAll();
                     Image i = (Image) UIManager.getInstance().getThemeImageConstant("menuImage");
                     if (i == null) {
-                        i = Resources.getSystemResource().getImage("of_menu.png");
+                        //i = Resources.getSystemResource().getImage("of_menu.png");
+                        i = FontImage.createMaterial(FontImage.MATERIAL_MORE_VERT, getUIManager().getComponentStyle("TouchCommand"));
                     }                    
                     Button menu = createTouchCommandButton(new Command("", i) {
 
@@ -1304,7 +1328,7 @@ public class MenuBar extends Container implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyPressed(int keyCode) {
         int commandBehavior = getCommandBehavior();
@@ -1332,7 +1356,7 @@ public class MenuBar extends Container implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void keyReleased(int keyCode) {
         int commandBehavior = getCommandBehavior();
@@ -1401,7 +1425,7 @@ public class MenuBar extends Container implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public void refreshTheme(boolean merge) {
         super.refreshTheme(merge);
@@ -1454,8 +1478,7 @@ public class MenuBar extends Container implements ActionListener {
         if (pref) {
             Container dialogContentPane = menu.getDialogComponent();
             marginLeft = parent.getWidth() - (dialogContentPane.getPreferredW()
-                    + menu.getStyle().getPadding(LEFT)
-                    + menu.getStyle().getPadding(RIGHT));
+                    + menu.getStyle().getHorizontalPadding());
             marginLeft = Math.max(0, marginLeft);
             if (parent.getSoftButtonCount() > 1) {
                 height = parent.getHeight() - parent.getSoftButton(0).getParent().getPreferredH() - dialogContentPane.getPreferredH();
@@ -1519,7 +1542,7 @@ public class MenuBar extends Container implements ActionListener {
             // bidi doesn't matter since this is just a summary of width
             maxWidth = Math.max(maxWidth,
                     c.getPreferredW()
-                    + s.getMargin(false, LEFT) + s.getMargin(false, RIGHT));
+                    + s.getHorizontalMargins());
         }
         return Math.max(2, Display.getInstance().getDisplayWidth() / maxWidth);
     }
@@ -1704,7 +1727,7 @@ public class MenuBar extends Container implements ActionListener {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected int getDragRegionStatus(int x, int y) {
         return DRAG_REGION_NOT_DRAGGABLE;

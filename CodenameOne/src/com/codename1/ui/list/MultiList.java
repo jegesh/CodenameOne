@@ -28,7 +28,14 @@ import com.codename1.ui.List;
 import java.util.Hashtable;
 
 /**
- * A list with a multi-button renderer by default
+ * <p>A list with a {@link com.codename1.components.MultiButton} renderer, <b>notice</b> that 
+ * <a href="https://www.codenameone.com/blog/avoiding-lists.html">we strongly
+ * discourage usage of lists</a>.. This simplifies the process of
+ * working with the list and its model as the renderer comes pre-configured for common use cases.
+ * </p>
+ * 
+ * <script src="https://gist.github.com/codenameone/b2ab6645db842d7b2750.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/graphics-urlimage-multilist.png" alt="MultiList and model in action" />
  *
  * @author Shai Almog
  */
@@ -36,6 +43,16 @@ public class MultiList extends List {
     private MultiButton sel;
     private MultiButton unsel;
     private Image placeholder;
+    
+    /**
+     * Constructor that accepts a model for the list
+     * @param model the model object to assign to the list
+     */
+    public MultiList(ListModel model) {
+        super(model);
+        sel = new MultiButton();
+        unsel = new MultiButton();
+    }
     
     /**
      * Constructor for the GUI builder
@@ -49,15 +66,26 @@ public class MultiList extends List {
         sel = new MultiButton();
         unsel = new MultiButton();
     }
-    
+
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void initComponent() {
         super.initComponent();
         GenericListCellRenderer gn = new GenericListCellRenderer(sel, unsel);
         setRenderer(gn);
     }
+
+    @Override
+    protected void deinitialize() {
+        super.deinitialize();
+        ListCellRenderer gn = getRenderer();
+        if(gn instanceof GenericListCellRenderer){
+            ((GenericListCellRenderer)gn).deinitialize(this);
+        }
+    }
+    
+    
     
     private static Hashtable h(String fline, String sline) {
         Hashtable h = new Hashtable();
@@ -83,7 +111,7 @@ public class MultiList extends List {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyNames() {
         return new String[] {
@@ -96,7 +124,7 @@ public class MultiList extends List {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Class[] getPropertyTypes() {
        return new Class[] {
@@ -124,7 +152,7 @@ public class MultiList extends List {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Object getPropertyValue(String name) {
         if(name.equals("placeholder")) {
@@ -134,7 +162,7 @@ public class MultiList extends List {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String setPropertyValue(String name, Object value) {
         if(name.equals("placeholder")) {

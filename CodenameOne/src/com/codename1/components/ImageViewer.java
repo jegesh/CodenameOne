@@ -24,6 +24,7 @@ package com.codename1.components;
 
 import com.codename1.ui.Component;
 import com.codename1.ui.Display;
+import com.codename1.ui.Form;
 import com.codename1.ui.Graphics;
 import com.codename1.ui.Image;
 import com.codename1.ui.animations.Animation;
@@ -36,7 +37,28 @@ import com.codename1.ui.list.ListModel;
 import com.codename1.ui.plaf.Style;
 
 /**
- * An image viewer component that allows zooming into an image and potentially flicking between multiple images
+ * <p>ImageViewer allows zooming/panning an image and potentially flicking between multiple images
+ * within a list of images. <br>
+ * E.g. the trivial usage works like this:</p>
+ * <script src="https://gist.github.com/codenameone/350a58254aa8b6f9f661.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-imageviewer.png" alt="Simple image viewer zoomed out" />
+ * <img src="https://www.codenameone.com/img/developer-guide/components-imageviewer-zoomed-in.png" alt="Simple image viewer zoomed in" />
+ * <p>
+ * You can simulate pinch to zoom on the simulator by dragging the right button away from the top left corner to 
+ * zoom in and towards the top left corner to zoom out. On Mac touchpads you can drag two fingers to achieve that.
+ * </p>
+ * <p>
+ * A more elaborate usage includes flicking between multiple images e.g.:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/2001562d621473fd42c5.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-imageviewer-multi.png" alt="Image viewer with multiple elements" />
+ * 
+ * <p>
+ * You can even download image URL's dynamically into the {@code ImageViewer} thanks to the usage of the 
+ * {@link com.codename1.ui.list.ListModel}. E.g. in this model book cover images are downloaded dynamically:
+ * </p>
+ * <script src="https://gist.github.com/codenameone/305c3f5426b0e2e80833.js"></script>
+ * <img src="https://www.codenameone.com/img/developer-guide/components-imageviewer-dynamic.png" alt="Image viewer with dynamic URL fetching model" />
  *
  * @author Shai Almog
  */
@@ -86,28 +108,28 @@ public class ImageViewer extends Component {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected void resetFocusable() {
         setFocusable(true);
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyNames() {
         return new String[] {"eagerLock", "image", "imageList", "swipePlaceholder"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected boolean shouldBlockSideSwipe() {
         return true;
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Class[] getPropertyTypes() {
        return new Class[] {Boolean.class, Image.class, 
@@ -115,14 +137,14 @@ public class ImageViewer extends Component {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String[] getPropertyTypeNames() {
         return new String[] {"Boolean", "Image", "Image[]", "Image"};
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public Object getPropertyValue(String name) {
         if(name.equals("eagerLock")) {
@@ -139,7 +161,8 @@ public class ImageViewer extends Component {
                 return null;
             }
             Image[] a = new Image[getImageList().getSize()];
-            for(int iter = 0 ; iter < a.length ; iter++) {
+            int alen = a.length;
+            for(int iter = 0 ; iter < alen ; iter++) {
                 a[iter] = getImageList().getItemAt(iter);
             }
             return a;
@@ -151,7 +174,7 @@ public class ImageViewer extends Component {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public String setPropertyValue(String name, Object value) {
         if(name.equals("eagerLock")) {
@@ -178,7 +201,7 @@ public class ImageViewer extends Component {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void initComponent() {
@@ -188,6 +211,9 @@ public class ImageViewer extends Component {
             image = Image.createImage(50, 50, 0);
         } else {
             image.lock();
+        }
+        if(image.isAnimation()) {
+            getComponentForm().registerAnimated(this);
         }
         eagerLock();
     }
@@ -239,7 +265,7 @@ public class ImageViewer extends Component {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void deinitialize() {
@@ -258,7 +284,7 @@ public class ImageViewer extends Component {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void keyReleased(int key) {
@@ -276,7 +302,7 @@ public class ImageViewer extends Component {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void pointerPressed(int x, int y) {
@@ -306,7 +332,7 @@ public class ImageViewer extends Component {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void pointerReleased(int x, int y) {
@@ -333,7 +359,7 @@ public class ImageViewer extends Component {
     
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void pointerDragged(int x, int y) {
@@ -389,7 +415,7 @@ public class ImageViewer extends Component {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     protected void laidOut() {
@@ -398,7 +424,7 @@ public class ImageViewer extends Component {
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     protected boolean pinch(float scale) {
@@ -422,8 +448,8 @@ public class ImageViewer extends Component {
         int iW = img.getWidth();
         int iH = img.getHeight();
         Style s = getStyle();
-        int width = getWidth() - s.getPadding(LEFT) - s.getPadding(RIGHT);
-        int height = getHeight() - s.getPadding(TOP) - s.getPadding(BOTTOM);
+        int width = getWidth() - s.getHorizontalPadding();
+        int height = getHeight() - s.getVerticalPadding();
         float r2; 
         if(imageInitialPosition == IMAGE_FIT){
             r2 = Math.min(((float)width) / ((float)iW), ((float)height) / ((float)iH));
@@ -434,8 +460,8 @@ public class ImageViewer extends Component {
         // calculate the image position to fit
         prefW = (int)(((float)iW) * r2);
         prefH = (int)(((float)iH) * r2);
-        prefX = s.getPadding(LEFT) + (width - prefW) / 2;
-        prefY = s.getPadding(TOP) + (height - prefH) / 2;
+        prefX = s.getPaddingLeftNoRTL() + (width - prefW) / 2;
+        prefY = s.getPaddingTop() + (height - prefH) / 2;
     }
     
     private void updatePositions() {
@@ -450,8 +476,8 @@ public class ImageViewer extends Component {
         int iW = image.getWidth();
         int iH = image.getHeight();
         Style s = getStyle();
-        int width = getWidth() - s.getPadding(LEFT) - s.getPadding(RIGHT);
-        int height = getHeight() - s.getPadding(TOP) - s.getPadding(BOTTOM);
+        int width = getWidth() - s.getHorizontalPadding();
+        int height = getHeight() - s.getVerticalPadding();
         float r2;
         if(imageInitialPosition == IMAGE_FIT){
             r2 = Math.min(((float)width) / ((float)iW), ((float)height) / ((float)iH));
@@ -460,12 +486,12 @@ public class ImageViewer extends Component {
         }
         imageDrawWidth = (int)(((float)iW) * r2 * zoom);
         imageDrawHeight = (int)(((float)iH) * r2 * zoom);
-        imageX = (int)(s.getPadding(LEFT) + (width - imageDrawWidth) * panPositionX);
-        imageY = (int)(s.getPadding(TOP) + (height - imageDrawHeight) * panPositionY);
+        imageX = (int)(s.getPaddingLeftNoRTL()+ (width - imageDrawWidth) * panPositionX);
+        imageY = (int)(s.getPaddingTop() + (height - imageDrawHeight) * panPositionY);
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override    
     protected Dimension calcPreferredSize() {
@@ -476,13 +502,16 @@ public class ImageViewer extends Component {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public boolean animate() {
         boolean result = false;
         if(image != null && image.isAnimation()) {
             result = image.animate();
+            if (result) {
+                updatePositions();
+            }
         }
         return super.animate() || result; 
     }
@@ -490,13 +519,13 @@ public class ImageViewer extends Component {
     
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void paint(Graphics g) {
         if(panPositionX < 0) {
             Style s = getStyle();
-            int width = getWidth() - s.getPadding(LEFT) - s.getPadding(RIGHT);
+            int width = getWidth() - s.getHorizontalPadding();
             float ratio = ((float)width) * (panPositionX * -1);
             g.drawImage(image, ((int)ratio) + getX() + imageX, getY() + imageY, imageDrawWidth, imageDrawHeight);
             if (cycleLeft || swipeableImages.getSelectedIndex() > getImageLeftPos()) {
@@ -514,7 +543,7 @@ public class ImageViewer extends Component {
         }
         if(panPositionX > 1) {
             Style s = getStyle();
-            int width = getWidth() - s.getPadding(LEFT) - s.getPadding(RIGHT);
+            int width = getWidth() - s.getHorizontalPadding();
             float ratio = ((float)width) * (1 - panPositionX);
             g.drawImage(image, ((int)ratio) + getX() + imageX, getY() + imageY, imageDrawWidth, imageDrawHeight);
             if (cycleRight || swipeableImages.getSelectedIndex() < getImageRightPos()) {
@@ -530,11 +559,14 @@ public class ImageViewer extends Component {
             }
             return;
         }
-        g.drawImage(image, getX() + imageX, getY() + imageY, imageDrawWidth, imageDrawHeight);
+        // can happen in the GUI builder
+        if(image != null) {
+            g.drawImage(image, getX() + imageX, getY() + imageY, imageDrawWidth, imageDrawHeight);
+        }
     }
     
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     protected void paintBackground(Graphics g) {
@@ -564,13 +596,28 @@ public class ImageViewer extends Component {
             this.image = image;
             updatePositions();
             repaint();
+            if(image.isAnimation()) {
+                Form f = getComponentForm();
+                if(f != null) {
+                    f.registerAnimated(this);
+                }
+            }
         }
+    }
+    
+    /**
+     * Sets the current image without any changes to the panning/scaling
+     * @param image new image instance
+     */
+    public void setImageNoReposition(Image image) {
+        this.image = image;
+        repaint();
     }
     
     /**
      * By providing this optional list of images you can allows swiping between multiple images
      * 
-     * @param list a list of images
+     * @param model a list of images
      */
     public void setImageList(ListModel<Image> model) {
         if(model == null || model.getSize() == 0) {

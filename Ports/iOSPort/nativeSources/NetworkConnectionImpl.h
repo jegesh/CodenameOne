@@ -29,6 +29,7 @@
     int responseCode;
     NSDictionary* allHeaderFields;
     NSURLConnection *connection;
+    int chunkedStreamingLen;
 }
 
 - (void*)openConnection:(NSString*)url timeout:(int)timeout;
@@ -40,11 +41,13 @@
 - (NSString*)getResponseHeader:(NSString*)name;
 - (void)addHeader:(NSString*)key value:(NSString*)value;
 - (void)setBody:(void*)body size:(int)size;
+- (void)setBody:(NSString*)file;
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response;
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error;
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data;
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection;
 - (int)getResponseHeaderCount;
 - (NSString*)getResponseHeaderName:(int)offset;
+-(void)setChunkedStreamingLen:(int)len;
 
 @end

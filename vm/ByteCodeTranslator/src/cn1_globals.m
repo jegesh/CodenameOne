@@ -115,17 +115,15 @@ struct clazz class_array3__JAVA_DOUBLE = {
    DEBUG_GC_INIT 0, 999999, 0, 0, 0, 0, 0, 0, &gcMarkArrayObject, 0, cn1_array_3_id_JAVA_DOUBLE, "double[]", JAVA_TRUE, 3, &class__java_lang_Double, JAVA_TRUE, &class__java_lang_Object, EMPTY_INTERFACES, 0, 0, 0
 };
 
-
-struct elementStruct* pop(struct elementStruct* array, int* sp) {
+struct elementStruct* pop(struct elementStruct** sp) {
     --(*sp);
-    struct elementStruct* retVal = &array[*sp];
-    return retVal;
+    return *sp;
 }
 
-void popMany(CODENAME_ONE_THREAD_STATE, int count, struct elementStruct* array, int* sp) {
+void popMany(CODENAME_ONE_THREAD_STATE, int count, struct elementStruct** SP) {
     while(count > 0) {
-        --(*sp);
-        javaTypes t = array[*sp].type;
+        --(*SP);
+        javaTypes t = (*SP)->type;
         if(t == CN1_TYPE_DOUBLE || t == CN1_TYPE_LONG) {
             count -= 2;
         } else {
@@ -167,17 +165,7 @@ void flushReleaseQueue() {
 void freeAndFinalize(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT obj) {
     finalizerFunctionPointer ptr = (finalizerFunctionPointer)obj->__codenameOneParentClsReference->finalizerFunction;
     if(ptr != 0) {
-        DEFINE_METHOD_STACK(1, 1, 0, cn1_class_id_java_lang_Object, 1);
-        // exceptions might be thrown by the finalizer methods
-        DEFINE_EXCEPTION_HANDLING_CONSTANTS();
-        
-        DEFINE_CATCH_BLOCK(grabAllExceptions, label_continueToDeletion, 0);
-        BEGIN_TRY(-1, grabAllExceptions);
         ptr(threadStateData, obj);
-        END_TRY();
-    label_continueToDeletion:
-        codenameOneGcFree(threadStateData, obj);
-        RETURN_FROM_VOID(1);
     }
     codenameOneGcFree(threadStateData, obj);
 }
@@ -693,9 +681,18 @@ JAVA_OBJECT codenameOneGcMalloc(CODENAME_ONE_THREAD_STATE, int size, struct claz
             
             if(threadStateData->heapAllocationSize > 0) {
                 invokedGC = YES;
+                threadStateData->nativeAllocationMode = JAVA_TRUE;
                 java_lang_System_gc__(threadStateData);
+                threadStateData->nativeAllocationMode = JAVA_FALSE;
                 threadStateData->threadActive = JAVA_FALSE;
                 while(threadStateData->threadBlockedByGC || threadStateData->heapAllocationSize > 0) {
+                    if (get_static_java_lang_System_gcThreadInstance() == JAVA_NULL) {
+                        // For some reason the gcThread is dead
+                        threadStateData->nativeAllocationMode = JAVA_TRUE;
+                        java_lang_System_gc__(threadStateData);
+                        threadStateData->nativeAllocationMode = JAVA_FALSE;
+                        threadStateData->threadActive = JAVA_FALSE;
+                    }
                     usleep((JAVA_INT)(1000));
                 }
                 invokedGC = NO;
@@ -912,6 +909,7 @@ JAVA_OBJECT xmlvm_create_java_string(CODENAME_ONE_THREAD_STATE, const char *chr)
 void initConstantPool() {
     __STATIC_INITIALIZER_java_lang_Class(getThreadLocalData());
     struct ThreadLocalData* threadStateData = getThreadLocalData();
+    enteringNativeAllocations();
     JAVA_ARRAY arr = (JAVA_ARRAY)allocArray(threadStateData, CN1_CONSTANT_POOL_SIZE, &class_array1__java_lang_String, sizeof(JAVA_OBJECT), 1);
     JAVA_OBJECT* tmpConstantPoolObjects = (JAVA_ARRAY_OBJECT*)(*arr).data;
     
@@ -939,8 +937,11 @@ void initConstantPool() {
     constantPoolObjects = tmpConstantPoolObjects;
     invokedGC = NO;
 
+    enteringNativeAllocations();
+
     // it will wait two seconds unless an explicit GC occurs
-    java_lang_System_startGCThread__(getThreadLocalData());
+    java_lang_System_startGCThread__(threadStateData);
+    finishedNativeAllocations();
 }
 
 JAVA_OBJECT utf8String = NULL;
@@ -1072,19 +1073,34 @@ void throwException(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT exceptionArg) {
     threadStateData->exception = exceptionArg; 
     threadStateData->tryBlockOffset--; 
     while(threadStateData->tryBlockOffset >= 0) { 
-        if(threadStateData->blocks[threadStateData->tryBlockOffset].exceptionClass == -1 || instanceofFunction(threadStateData->blocks[threadStateData->tryBlockOffset].exceptionClass, exceptionArg->__codenameOneParentClsReference->classId)) { 
+        if(threadStateData->blocks[threadStateData->tryBlockOffset].exceptionClass <= 0 || instanceofFunction(threadStateData->blocks[threadStateData->tryBlockOffset].exceptionClass, exceptionArg->__codenameOneParentClsReference->classId)) {
             int off = threadStateData->tryBlockOffset; 
-            threadStateData->tryBlockOffset--; 
-            longjmp(threadStateData->blocks[off].destination, 1); 
+            longjmp(threadStateData->blocks[off].destination, 1);
+            return;
         } 
         threadStateData->tryBlockOffset--; 
     } 
+}
+
+JAVA_INT throwException_R_int(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT exceptionArg) {
+    throwException(threadStateData, exceptionArg);
+    return 0;
+}
+
+JAVA_BOOLEAN throwException_R_boolean(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT exceptionArg) {
+    throwException(threadStateData, exceptionArg);
+    return JAVA_FALSE;
 }
 
 void throwArrayIndexOutOfBoundsException(CODENAME_ONE_THREAD_STATE, int index) {
     JAVA_OBJECT arrayIndexOutOfBoundsException = __NEW_java_lang_ArrayIndexOutOfBoundsException(threadStateData);
     java_lang_ArrayIndexOutOfBoundsException___INIT_____int(threadStateData, arrayIndexOutOfBoundsException, index);
     throwException(threadStateData, arrayIndexOutOfBoundsException);
+}
+
+JAVA_BOOLEAN throwArrayIndexOutOfBoundsException_R_boolean(CODENAME_ONE_THREAD_STATE, int index) {
+    throwArrayIndexOutOfBoundsException(threadStateData, index);
+    return JAVA_FALSE;
 }
 
 void** interfaceVtableGlobal = 0;
